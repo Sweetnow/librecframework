@@ -28,6 +28,8 @@ def _add_argument_factory(dtype: type):
 
         if not arg.default is None:
             kwargs['default'] = arg.default
+        else:
+            kwargs['required'] = True
 
         parser.add_argument(*arg.cli_aliases, **kwargs)
 

@@ -85,21 +85,28 @@ class DatasetBase(Dataset):
         return records, pos_pairs, ground_truth
 
     def _load_social_relation(self) -> Tuple[dict, sp.csr_matrix]:
-        with open(self.path / self.name / 'social_relation.txt', 'r') as f:
-            friends = [[int(one) for one in line.strip().split('\t')]
-                       for line in f]
-        indice = []
-        friend_dict = defaultdict(set)
-        for u1, u2 in friends:
-            indice += [(u1, u2), (u2, u1)]
-            friend_dict[u1].add(u2)
-            friend_dict[u2].add(u1)
-        indice_sp = np.array(indice, dtype=np.int32)
-        values_sp = np.ones(len(indice), dtype=np.float32)
-        social_graph = sp.coo_matrix(
-            (values_sp, (indice_sp[:, 0], indice_sp[:, 1])),
-            shape=(self.num_users, self.num_users)).tocsr()
-        return friend_dict, social_graph
+        try:
+            with open(self.path / self.name / 'social_relation.txt', 'r') as f:
+                friends = [[int(one) for one in line.strip().split('\t')]
+                        for line in f]
+            indice = []
+            friend_dict = defaultdict(set)
+            for u1, u2 in friends:
+                indice += [(u1, u2), (u2, u1)]
+                friend_dict[u1].add(u2)
+                friend_dict[u2].add(u1)
+            indice_sp = np.array(indice, dtype=np.int32)
+            values_sp = np.ones(len(indice), dtype=np.float32)
+            social_graph = sp.coo_matrix(
+                (values_sp, (indice_sp[:, 0], indice_sp[:, 1])),
+                shape=(self.num_users, self.num_users)).tocsr()
+        except FileNotFoundError:
+            return None, None
+        except:
+            print("Unexpected error:", sys.exc_info()[0])
+            raise
+        else:
+            return friend_dict, social_graph
 
 
 class TrainDataset(DatasetBase):

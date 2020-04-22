@@ -45,3 +45,6 @@ def autoselect(gpu_target: List[int], min_memory: float):
     else:
         raise MemoryError(str(memories))
     return int(gpuid)
+
+if __name__ == "__main__":
+    print(autoselect([0,1,2,3,4,5,6,7], 2))
