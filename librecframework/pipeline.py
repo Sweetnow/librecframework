@@ -17,6 +17,7 @@ from .data.dataset import TrainDataset, FullyRankingTestDataset, LeaveOneOutTest
 from .utils.convert import name_to_metric, path_to_saved_model
 from .utils.visshow import VisShow
 from .utils.training import early_stop, check_overfitting
+from .utils.gpu_selector import autoselect
 from .model import Model
 from .logger import Logger
 from .train import train
@@ -72,6 +73,7 @@ class _DefaultTrainPipeline(Pipeline):
             pretrain_path: Union[str, Path],
             sample_tag: str,
             pin_memory: bool,
+            min_memory: float,
             # ==== partial parameters ====
             test_dataset_type: type,
             test_function):
@@ -94,6 +96,7 @@ class _DefaultTrainPipeline(Pipeline):
         self.train_loader, self.test_loader = None, None
         self.log = None
         self.pin_memory = pin_memory
+        self.min_memory = min_memory
 
         self.infos = None
         self.model_class = None
@@ -192,8 +195,8 @@ class _DefaultTrainPipeline(Pipeline):
             logpath, logger_args['policy'],
             checkpoint_target=target)
         pretrain = 'pretrain' in self._hpm and self._hpm['pretrain']
-
-        with torch.cuda.device(self._eam['device']):
+        gpu_id = autoselect(self._eam['device'], self.min_memory)
+        with torch.cuda.device(gpu_id):
             for info in self.infos:
                 envdir = modelname
                 sub_env = f"{self._eam['tag']}-{'-'.join(map(str,info._asdict().values()))}-{pretrain}"
@@ -271,7 +274,8 @@ class DefaultFullyRankingTrainPipeline(_DefaultTrainPipeline):
             other_arg_path: Union[str, Path],
             pretrain_path: Union[str, Path],
             sample_tag: str,
-            pin_memory: bool):
+            pin_memory: bool,
+            min_memory: float):
         super().__init__(
             description,
             supported_datasets,
@@ -282,6 +286,7 @@ class DefaultFullyRankingTrainPipeline(_DefaultTrainPipeline):
             pretrain_path,
             sample_tag,
             pin_memory,
+            min_memory,
             FullyRankingTestDataset,
             fully_ranking_test
         )
@@ -298,7 +303,8 @@ class DefaultLeaveOneOutTrainPipeline(_DefaultTrainPipeline):
             other_arg_path: Union[str, Path],
             pretrain_path: Union[str, Path],
             sample_tag: str,
-            pin_memory: bool):
+            pin_memory: bool,
+            min_memory: float):
         super().__init__(
             description,
             supported_datasets,
@@ -309,6 +315,7 @@ class DefaultLeaveOneOutTrainPipeline(_DefaultTrainPipeline):
             pretrain_path,
             sample_tag,
             pin_memory,
+            min_memory,
             LeaveOneOutTestDataset,
             leave_one_out_test
         )
@@ -322,6 +329,7 @@ class _DefaultTestPipeline(Pipeline):
             test_funcs: DatasetFuncs,
             other_arg_path: Union[str, Path],
             pin_memory: bool,
+            min_memory: float,
             # ==== partial parameters ====
             test_dataset_type: type,
             test_function
@@ -345,6 +353,7 @@ class _DefaultTestPipeline(Pipeline):
         self.infos = None
         self.model_class = None
         self.pin_memory = pin_memory
+        self.min_memory = min_memory
 
         self._test_dataset_type = test_dataset_type
         self._test = test_function
@@ -417,8 +426,8 @@ class _DefaultTestPipeline(Pipeline):
         self.log = Logger(
             logpath, logger_args['policy'],
             checkpoint_target=target)
-
-        with torch.cuda.device(self._eam['device']):
+        gpu_id = autoselect(self._eam['device'], self.min_memory)
+        with torch.cuda.device(gpu_id):
             for metadata in self.infos:
                 eval_str = f"Eval: {modelname}_{metadata['id']}"
                 setproctitle.setproctitle(
@@ -448,13 +457,15 @@ class DefaultFullyRankingTestPipeline(_DefaultTestPipeline):
             train_funcs: DatasetFuncs,
             test_funcs: DatasetFuncs,
             other_arg_path: Union[str, Path],
-            pin_memory: bool):
+            pin_memory: bool,
+            min_memory: float):
         super().__init__(
             description,
             train_funcs,
             test_funcs,
             other_arg_path,
             pin_memory,
+            min_memory,
             FullyRankingTestDataset,
             fully_ranking_test
         )
@@ -467,13 +478,15 @@ class DefaultLeaveOneOutTestPipeline(_DefaultTestPipeline):
             train_funcs: DatasetFuncs,
             test_funcs: DatasetFuncs,
             other_arg_path: Union[str, Path],
-            pin_memory: bool):
+            pin_memory: bool,
+            min_memory: float):
         super().__init__(
             description,
             train_funcs,
             test_funcs,
             other_arg_path,
             pin_memory,
+            min_memory,
             LeaveOneOutTestDataset,
             leave_one_out_test
         )
@@ -491,6 +504,7 @@ class _DefaultPipeline(Pipeline):
             pretrain_path: Union[str, Path],
             sample_tag: str,
             pin_memory: bool,
+            min_memory: float,
             # ==== partial parameters ====
             train_pipeline_type,
             test_pipeline_type
@@ -504,14 +518,16 @@ class _DefaultPipeline(Pipeline):
             other_arg_path,
             pretrain_path,
             sample_tag,
-            pin_memory
+            pin_memory,
+            min_memory
         )
         self._test_pipeline = test_pipeline_type(
             description,
             train_funcs,
             test_funcs,
             other_arg_path,
-            pin_memory
+            pin_memory,
+            min_memory
         )
         self.description = description
         self.which = None
@@ -587,7 +603,8 @@ class DefaultFullyRankingPipeline(_DefaultPipeline):
             other_arg_path: Union[str, Path],
             pretrain_path: Union[str, Path],
             sample_tag: str,
-            pin_memory: bool):
+            pin_memory: bool,
+            min_memory: float):
         super().__init__(
             description,
             supported_datasets,
@@ -598,6 +615,7 @@ class DefaultFullyRankingPipeline(_DefaultPipeline):
             pretrain_path,
             sample_tag,
             pin_memory,
+            min_memory,
             DefaultFullyRankingTrainPipeline,
             DefaultFullyRankingTestPipeline)
 
@@ -613,7 +631,8 @@ class DefaultLeaveOneOutPipeline(_DefaultPipeline):
             other_arg_path: Union[str, Path],
             pretrain_path: Union[str, Path],
             sample_tag: str,
-            pin_memory: bool):
+            pin_memory: bool,
+            min_memory: float):
         super().__init__(
             description,
             supported_datasets,
@@ -624,5 +643,6 @@ class DefaultLeaveOneOutPipeline(_DefaultPipeline):
             pretrain_path,
             sample_tag,
             pin_memory,
+            min_memory,
             DefaultLeaveOneOutTrainPipeline,
             DefaultLeaveOneOutTestPipeline)

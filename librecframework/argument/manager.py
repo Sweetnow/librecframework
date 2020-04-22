@@ -384,8 +384,10 @@ def default_env_argument_manager(
         'device',
         ['-D', '--device'],
         dtype=int,
+        multi=True,
         validator=lambda x: torch.cuda.device_count() > x >= 0,
-        helpstr=f'Which GPU 0-{torch.cuda.device_count() - 1}'
+        helpstr=f'Which GPU 0-{torch.cuda.device_count() - 1}',
+        default=list(range(torch.cuda.device_count()))
     )
     manager.register(
         'tag',

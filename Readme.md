@@ -9,4 +9,3 @@
 ## 未完成工作
 
 - analyse
-- auto select GPU
