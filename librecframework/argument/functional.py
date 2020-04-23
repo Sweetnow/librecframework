@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Union, Dict
+from typing import Union, Dict, Union
 from argparse import ArgumentParser, _ArgumentGroup
 import re
 from . import Argument
@@ -14,14 +14,21 @@ def _add_argument_factory(dtype: type):
     def _add_argument(
             parser: Union[ArgumentParser, _ArgumentGroup],
             arg: Argument,
-            action: type) -> None:
+            action: Union[type, str] = 'default') -> None:
         assert arg.dtype is dtype
-        kwargs = {
-            'help': arg.helpstr,
-            'dest': arg.pname,
-            'type': arg.dtype,
-            'action': action
-        }
+        if action == 'default':
+            kwargs = {
+                'help': arg.helpstr,
+                'dest': arg.pname,
+                'type': arg.dtype
+            }
+        else:
+            kwargs = {
+                'help': arg.helpstr,
+                'dest': arg.pname,
+                'type': arg.dtype,
+                'action': action
+            }
 
         if arg.multi:
             kwargs['nargs'] = '+'
@@ -49,24 +56,37 @@ add_str_argument = _add_argument_factory(str)
 def add_bool_argument(
         parser: Union[ArgumentParser, _ArgumentGroup],
         arg: Argument,
-        actions: Dict[str, type]) -> None:
+        actions: Union[Dict[str, type], str] = 'default') -> None:
     assert arg.dtype is bool
 
     group = parser.add_mutually_exclusive_group()
+    if actions == 'default':
+        true_kwargs = {
+            'help': arg.helpstr,
+            'dest': arg.pname,
+            'nargs': 0,
+            'action': 'store_true'
 
-    true_kwargs = {
-        'help': arg.helpstr,
-        'dest': arg.pname,
-        'nargs': 0,
-        'action': actions['true'],
-
-    }
-    false_kwargs = {
-        'help': arg.helpstr,
-        'dest': arg.pname,
-        'nargs': 0,
-        'action': actions['false'],
-    }
+        }
+        false_kwargs = {
+            'help': arg.helpstr,
+            'dest': arg.pname,
+            'nargs': 0,
+            'action': 'store_false'
+        }
+    else:
+        true_kwargs = {
+            'help': arg.helpstr,
+            'dest': arg.pname,
+            'nargs': 0,
+            'action': actions['true']
+        }
+        false_kwargs = {
+            'help': arg.helpstr,
+            'dest': arg.pname,
+            'nargs': 0,
+            'action': actions['false']
+        }
 
     if arg.multi:
         raise ValueError('arg.multi is not supported by bool argument')

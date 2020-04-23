@@ -103,7 +103,9 @@ def _path_to_saved_thing(path: Union[str, Path], suffix: str) -> Tuple[list, str
                 'id': infoid,
                 'info': info,
                 'path': target_path,
-                'env': rawinfo['env']
+                'env': rawinfo['env'],
+                'metrics': rawinfo['metrics'],
+                'model': rawinfo['model']
             })
         return metadatas, dataset_name
 
