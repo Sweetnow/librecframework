@@ -27,7 +27,7 @@ def autoselect(gpu_target: List[int], min_memory: float):
             else:
                 handle = nvmlDeviceGetHandleByIndex(i)
                 memories[i, c] = nvmlDeviceGetMemoryInfo(handle).free / 1024**3
-                rates[i, c] = nvmlDeviceGetUtilizationRates(handle).gpu
+                rates[i, c] = int(nvmlDeviceGetUtilizationRates(handle).gpu)
         time.sleep(INTERVAL)
     nvmlShutdown()
     memories = memories.mean(1)
