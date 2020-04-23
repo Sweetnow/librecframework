@@ -29,7 +29,8 @@ def name_to_activation(name: str) -> nn.Module:
         'lrelu': nn.LeakyReLU,
         'prelu': nn.PReLU,
         'elu': nn.ELU,
-        'sigmoid': nn.Sigmoid
+        'sigmoid': nn.Sigmoid,
+        'tanh': nn.Tanh
     }
     if name in tables:
         return tables[name]()
