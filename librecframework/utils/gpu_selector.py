@@ -40,7 +40,7 @@ def autoselect(gpu_target: List[int], min_memory: float):
         # if multi GPUs' util are the same, choose one that has the most memory
         gpu_min_ids = np.where(rates[memory_enough_ids] <= rates[gpuid])[0]
         gpu_min_ids = memory_enough_ids[gpu_min_ids]
-        gpuid = gpu_min_ids[np.argmin(memories[gpu_min_ids])]
+        gpuid = gpu_min_ids[np.argmax(memories[gpu_min_ids])]
         logging.info(f'Auto select GPU {gpuid}')
     else:
         raise MemoryError(str(memories))
