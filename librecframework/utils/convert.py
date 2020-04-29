@@ -15,7 +15,8 @@ import scipy.sparse as sp
 from ..metric import _Metric, _ALL_METRICS
 
 __all__ = ['name_to_metric', 'name_to_activation',
-           'path_to_saved_model', 'path_to_saved_log', 'scisp_to_torch']
+           'path_to_saved_model', 'path_to_saved_log',
+           'scisp_to_torch', 'torch_to_scisp']
 
 
 def name_to_metric(name: str, topk: int) -> _Metric:
@@ -128,6 +129,15 @@ def scisp_to_torch(m: Union[sp.bsr_matrix, sp.coo_matrix,
         torch.from_numpy(m.data),
         size=m.shape)
     return t
+
+def torch_to_scisp(t: torch.Tensor) -> sp.coo_matrix:
+    if t.is_sparse:
+        indice = t._indices().numpy()
+        values = t._values().numpy()
+        m = sp.coo_matrix((values, (indice[0,:], indice[1,:])), shape=t.shape)
+        return m
+    else:
+        raise TypeError(f'{type(t)} is not torch.sparse')
 
 
 def _activation_rebuild(name: str) -> nn.Module:

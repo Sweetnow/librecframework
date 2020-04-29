@@ -11,3 +11,4 @@
 - analyse
 - optim选择
 - 完善激活函数选择
+- default test batch size

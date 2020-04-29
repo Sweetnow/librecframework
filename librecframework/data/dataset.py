@@ -140,7 +140,8 @@ class TrainDataset(DatasetBase):
         self.max_epoch, self.num_worker = max_epoch, num_worker
         self.tag = sample_tag
         self.neg_qs = None
-        self.sample(funcs.sample, self.tag, seed, use_backup)
+        self.use_backup = use_backup
+        self.sample(funcs.sample, self.tag, seed, self.use_backup)
         self.init_epoch()
         logging.debug('finish loading neg sample')
 
