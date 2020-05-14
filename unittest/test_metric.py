@@ -18,6 +18,24 @@ def test_convert():
         assert (str(m) == str(r))
 
 
+def test_precision():
+    m = Precision(topk)
+    m.start()
+    gt = torch.FloatTensor([
+        [1, 0, 0, 1, 0],
+        [0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1]
+    ])
+    score = torch.FloatTensor([
+        [10, 4, 3, 2, 9],
+        [0, 0, 0, 0, 0],
+        [0, 1, 2, 4, 3]
+    ])
+    m(score, gt)
+    m.stop()
+    t = (1 + 0 + 1) / 3 / topk
+    assert (abs(m.metric - t) < eps)
+
 def test_recall():
     m = Recall(topk)
     m.start()

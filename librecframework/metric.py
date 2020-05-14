@@ -6,7 +6,7 @@
 from abc import ABC, abstractmethod
 import torch
 
-__all__ = ['Recall', 'NDCG', 'MRR',
+__all__ = ['Precision', 'Recall', 'NDCG', 'MRR',
            'LeaveOneHR', 'LeaveOneNDCG', 'LeaveOneMRR']
 
 _is_hit_cache = {}
@@ -78,6 +78,14 @@ class TopkMetric(_Metric):
 
     def __str__(self) -> str:
         return f'{self.__class__.__name__}@{self.topk}'
+
+
+class Precision(TopkMetric):
+    def __call__(self, scores: torch.Tensor, ground_truth: torch.Tensor) -> None:
+        is_hit = _get_is_hit(scores, ground_truth, self.topk)
+        is_hit = is_hit.mean(dim=1)
+        self._cnt += scores.shape[0]
+        self._sum += is_hit.sum().item()
 
 
 class Recall(TopkMetric):
@@ -195,6 +203,6 @@ class LeaveOneMRR(TopkMetric):
 
 
 _ALL_METRICS = {cls.__name__: cls for cls in (
-    Recall, NDCG, MRR, LeaveOneHR, LeaveOneNDCG
+    Precision, Recall, NDCG, MRR, LeaveOneHR, LeaveOneNDCG
 )}
 # TODO: one singleton named `metric_manager` which has function `register` for user-defined metric

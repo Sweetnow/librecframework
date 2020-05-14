@@ -12,3 +12,5 @@
 - optim选择
 - 完善激活函数选择
 - default test batch size
+- dgl module
+- 基于线性拟合的收敛性判断
