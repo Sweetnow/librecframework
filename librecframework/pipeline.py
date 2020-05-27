@@ -74,6 +74,7 @@ class _DefaultTrainPipeline(Pipeline):
             sample_tag: str,
             pin_memory: bool,
             min_memory: float,
+            test_batch_size: int,
             # ==== partial parameters ====
             test_dataset_type: type,
             test_function):
@@ -81,7 +82,7 @@ class _DefaultTrainPipeline(Pipeline):
         self._train_funcs = train_funcs
         self._test_funcs = test_funcs
         self._eam = default_env_argument_manager('both', self._datasets)
-        self._lam = default_loader_argument_manager('both')
+        self._lam = default_loader_argument_manager('both', test_batch_size)
         self._hpm = hyperparam_manager
         self._other_arg_path = other_arg_path
         self._pretrain_path = pretrain_path
@@ -275,7 +276,8 @@ class DefaultFullyRankingTrainPipeline(_DefaultTrainPipeline):
             pretrain_path: Union[str, Path],
             sample_tag: str,
             pin_memory: bool,
-            min_memory: float):
+            min_memory: float,
+            test_batch_size: int = 4096):
         super().__init__(
             description,
             supported_datasets,
@@ -287,6 +289,7 @@ class DefaultFullyRankingTrainPipeline(_DefaultTrainPipeline):
             sample_tag,
             pin_memory,
             min_memory,
+            test_batch_size,
             FullyRankingTestDataset,
             fully_ranking_test
         )
@@ -304,7 +307,8 @@ class DefaultLeaveOneOutTrainPipeline(_DefaultTrainPipeline):
             pretrain_path: Union[str, Path],
             sample_tag: str,
             pin_memory: bool,
-            min_memory: float):
+            min_memory: float,
+            test_batch_size: int = 4096):
         super().__init__(
             description,
             supported_datasets,
@@ -316,6 +320,7 @@ class DefaultLeaveOneOutTrainPipeline(_DefaultTrainPipeline):
             sample_tag,
             pin_memory,
             min_memory,
+            test_batch_size,
             LeaveOneOutTestDataset,
             leave_one_out_test
         )
@@ -330,6 +335,7 @@ class _DefaultTestPipeline(Pipeline):
             other_arg_path: Union[str, Path],
             pin_memory: bool,
             min_memory: float,
+            test_batch_size: int,
             # ==== partial parameters ====
             test_dataset_type: type,
             test_function
@@ -337,7 +343,7 @@ class _DefaultTestPipeline(Pipeline):
         self._train_funcs = train_funcs
         self._test_funcs = test_funcs
         self._eam = default_env_argument_manager('test')
-        self._lam = default_loader_argument_manager('test')
+        self._lam = default_loader_argument_manager('test', test_batch_size)
         self._other_arg_path = other_arg_path
 
         self._args, self._oargs, self._pretrain = None, None, None
@@ -458,7 +464,8 @@ class DefaultFullyRankingTestPipeline(_DefaultTestPipeline):
             test_funcs: DatasetFuncs,
             other_arg_path: Union[str, Path],
             pin_memory: bool,
-            min_memory: float):
+            min_memory: float,
+            test_batch_size: int = 4096):
         super().__init__(
             description,
             train_funcs,
@@ -466,6 +473,7 @@ class DefaultFullyRankingTestPipeline(_DefaultTestPipeline):
             other_arg_path,
             pin_memory,
             min_memory,
+            test_batch_size,
             FullyRankingTestDataset,
             fully_ranking_test
         )
@@ -479,7 +487,8 @@ class DefaultLeaveOneOutTestPipeline(_DefaultTestPipeline):
             test_funcs: DatasetFuncs,
             other_arg_path: Union[str, Path],
             pin_memory: bool,
-            min_memory: float):
+            min_memory: float,
+            test_batch_size: int = 4096):
         super().__init__(
             description,
             train_funcs,
@@ -487,6 +496,7 @@ class DefaultLeaveOneOutTestPipeline(_DefaultTestPipeline):
             other_arg_path,
             pin_memory,
             min_memory,
+            test_batch_size,
             LeaveOneOutTestDataset,
             leave_one_out_test
         )
@@ -505,6 +515,7 @@ class _DefaultPipeline(Pipeline):
             sample_tag: str,
             pin_memory: bool,
             min_memory: float,
+            test_batch_size: int,
             # ==== partial parameters ====
             train_pipeline_type,
             test_pipeline_type
@@ -519,7 +530,8 @@ class _DefaultPipeline(Pipeline):
             pretrain_path,
             sample_tag,
             pin_memory,
-            min_memory
+            min_memory,
+            test_batch_size
         )
         self._test_pipeline = test_pipeline_type(
             description,
@@ -527,7 +539,8 @@ class _DefaultPipeline(Pipeline):
             test_funcs,
             other_arg_path,
             pin_memory,
-            min_memory
+            min_memory,
+            test_batch_size
         )
         self.description = description
         self.which = None
@@ -604,7 +617,8 @@ class DefaultFullyRankingPipeline(_DefaultPipeline):
             pretrain_path: Union[str, Path],
             sample_tag: str,
             pin_memory: bool,
-            min_memory: float):
+            min_memory: float,
+            test_batch_size: int = 4096):
         super().__init__(
             description,
             supported_datasets,
@@ -616,6 +630,7 @@ class DefaultFullyRankingPipeline(_DefaultPipeline):
             sample_tag,
             pin_memory,
             min_memory,
+            test_batch_size,
             DefaultFullyRankingTrainPipeline,
             DefaultFullyRankingTestPipeline)
 
@@ -632,7 +647,8 @@ class DefaultLeaveOneOutPipeline(_DefaultPipeline):
             pretrain_path: Union[str, Path],
             sample_tag: str,
             pin_memory: bool,
-            min_memory: float):
+            min_memory: float,
+            test_batch_size: int = 4096):
         super().__init__(
             description,
             supported_datasets,
@@ -644,5 +660,6 @@ class DefaultLeaveOneOutPipeline(_DefaultPipeline):
             sample_tag,
             pin_memory,
             min_memory,
+            test_batch_size,
             DefaultLeaveOneOutTrainPipeline,
             DefaultLeaveOneOutTestPipeline)

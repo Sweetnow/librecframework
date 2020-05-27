@@ -298,7 +298,7 @@ class _ArgumentManagerSum():
         parser.parse_args()
 
 
-def default_loader_argument_manager(train_or_test: str) -> ArgumentManager:
+def default_loader_argument_manager(train_or_test: str, default_test_batch: int = 4096) -> ArgumentManager:
     train_or_test = train_or_test.lower()
     tags = ('train', 'test', 'both')
     if not train_or_test in tags:
@@ -331,7 +331,7 @@ def default_loader_argument_manager(train_or_test: str) -> ArgumentManager:
             dtype=int,
             validator=lambda x: x > 0,
             helpstr='test loader batch size',
-            default=4096
+            default=default_test_batch
         )
         manager.register(
             'test_batch_worker',
