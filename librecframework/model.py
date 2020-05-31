@@ -3,6 +3,7 @@
 
 from typing import Tuple, Dict, Any, Optional
 from abc import ABC, abstractmethod
+from collections import defaultdict
 import torch
 import torch.nn as nn
 from .data.dataset import DatasetBase
@@ -20,6 +21,7 @@ class Model(nn.Module, ABC):
     - train: forward -> calculate_loss
     - test: before_evaluate -> evaluate
     '''
+
     @abstractmethod
     def load_pretrain(self, pretrain_info: Dict[str, Any]):
         return
@@ -48,9 +50,16 @@ class Model(nn.Module, ABC):
         `before` will be `before_evaluate` return values
         '''
         return
-    
+
     def register_trainhooks(self, trainhooks: Dict[str, TrainHook]):
-        self.trainhooks = trainhooks
+        self._trainhooks = trainhooks
+
+    @property
+    def trainhooks(self) -> Dict[str, TrainHook]:
+        if self.training:
+            return self._trainhooks
+        else:
+            return defaultdict(lambda: lambda x: None)
 
 
 class EmbeddingBasedModel(Model):
@@ -82,7 +91,7 @@ class DotBasedModel(EmbeddingBasedModel):
         return
 
     def forward(self, ps: torch.Tensor, qs: torch.Tensor):
-        ## FIXME: by torch.matmul([B,?,D], [B,?,D].t())
+        # FIXME: by torch.matmul([B,?,D], [B,?,D].t())
         ps_feature, qs_feature = self.propagate()
         qs_embedding = qs_feature[qs]
         ps_embedding = ps_feature[ps].expand(
