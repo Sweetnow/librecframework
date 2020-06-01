@@ -176,7 +176,12 @@ class _DefaultTrainPipeline(Pipeline):
 
         self.infos = self._hpm.to_infos()
 
-    def during_running(self, model_class: Model, other_args: Dict[str, Any], trainhooks: Optional[Dict[str, TrainHook]] = None):
+    def during_running(
+        self,
+        model_class: Model,
+        other_args: Dict[str, Any],
+        trainhooks: Optional[Dict[str, TrainHook]] = None,
+        optim_type = torch.optim.Adam):
         '''
         `other_args` will be sended to `model.__init__` as key-value args
         '''
@@ -218,7 +223,7 @@ class _DefaultTrainPipeline(Pipeline):
                     model.load_pretrain(self._pretrain[self._eam['dataset']])
                 model = model.cuda()
                 # op
-                op = torch.optim.Adam(model.parameters(), lr=info.lr)
+                op = optim_type(model.parameters(), lr=info.lr)
                 # env
                 train_args = self._oargs['training']
                 env = {
@@ -584,13 +589,18 @@ class _DefaultPipeline(Pipeline):
         else:
             raise RuntimeError(f'Unexpected `which` {self.which}')
 
-    def during_running(self, model_class: Model, other_args: Dict[str, Any], trainhooks: Optional[Dict[str, TrainHook]] = None):
+    def during_running(
+        self,
+        model_class: Model,
+        other_args: Dict[str, Any],
+        trainhooks: Optional[Dict[str, TrainHook]] = None,
+        optim_type = torch.optim.Adam):
         '''
         `other_args` will be sended to `model.__init__` as key-value args
         '''
         if self.which == 'train':
             self._train_pipeline.during_running(
-                model_class, other_args, trainhooks)
+                model_class, other_args, trainhooks, optim_type)
         elif self.which == 'test':
             self._test_pipeline.during_running(model_class, other_args)
         else:

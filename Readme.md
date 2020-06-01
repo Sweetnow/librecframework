@@ -9,7 +9,6 @@
 ## 未完成工作
 
 - analyse
-- optim选择
 - 完善激活函数选择
 - dgl module
 - 基于线性拟合的收敛性判断
