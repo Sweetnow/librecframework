@@ -5,7 +5,7 @@ from typing import Union, List, Dict, Any, Optional
 from pathlib import Path
 from abc import ABC, abstractmethod
 import json
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
 import logging
 import setproctitle
 import torch
@@ -45,7 +45,7 @@ class Pipeline(ABC):
         return
 
     @abstractmethod
-    def parse_args(self):
+    def parse_args(self, args: Optional[List[str]] = None, namespace: Optional[Namespace] = None):
         return
 
     @abstractmethod
@@ -115,10 +115,10 @@ class _DefaultTrainPipeline(Pipeline):
     def add_args(self, parser: ArgumentParser):
         (self._eam + self._lam + self._hpm).add_args(parser)
 
-    def parse_args(self):
+    def parse_args(self, args: Optional[List[str]] = None, namespace: Optional[Namespace] = None):
         parser = ArgumentParser(description=self.description)
         self.add_args(parser)
-        parser.parse_args()
+        parser.parse_args(args, namespace)
 
     def before_running(self):
         # get args
@@ -177,11 +177,11 @@ class _DefaultTrainPipeline(Pipeline):
         self.infos = self._hpm.to_infos()
 
     def during_running(
-        self,
-        model_class: Model,
-        other_args: Dict[str, Any],
-        trainhooks: Optional[Dict[str, TrainHook]] = None,
-        optim_type = torch.optim.Adam):
+            self,
+            model_class: Model,
+            other_args: Dict[str, Any],
+            trainhooks: Optional[Dict[str, TrainHook]] = None,
+            optim_type=torch.optim.Adam):
         '''
         `other_args` will be sended to `model.__init__` as key-value args
         '''
@@ -375,10 +375,10 @@ class _DefaultTestPipeline(Pipeline):
     def add_args(self, parser: ArgumentParser):
         (self._eam + self._lam).add_args(parser)
 
-    def parse_args(self):
+    def parse_args(self, args: Optional[List[str]] = None, namespace: Optional[Namespace] = None):
         parser = ArgumentParser(description=self.description)
         self.add_args(parser)
-        parser.parse_args()
+        parser.parse_args(args, namespace)
 
     def before_running(self):
         # get args
@@ -575,11 +575,14 @@ class _DefaultPipeline(Pipeline):
         self._test_pipeline.add_args(test_parser)
         test_parser.set_defaults(which='test')
 
-    def parse_args(self):
+    def parse_args(self, args: Optional[List[str]] = None, namespace: Optional[Namespace] = None):
         parser = ArgumentParser(description=self.description)
         self.add_args(parser)
-        args = parser.parse_args()
-        self.which = args.which
+        args = parser.parse_args(args, namespace)
+        try:
+            self.which = args.which
+        except AttributeError:
+            args = parser.parse_args(['-h'])
 
     def before_running(self):
         if self.which == 'train':
@@ -590,11 +593,11 @@ class _DefaultPipeline(Pipeline):
             raise RuntimeError(f'Unexpected `which` {self.which}')
 
     def during_running(
-        self,
-        model_class: Model,
-        other_args: Dict[str, Any],
-        trainhooks: Optional[Dict[str, TrainHook]] = None,
-        optim_type = torch.optim.Adam):
+            self,
+            model_class: Model,
+            other_args: Dict[str, Any],
+            trainhooks: Optional[Dict[str, TrainHook]] = None,
+            optim_type=torch.optim.Adam):
         '''
         `other_args` will be sended to `model.__init__` as key-value args
         '''
