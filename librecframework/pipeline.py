@@ -224,6 +224,7 @@ class _DefaultTrainPipeline(Pipeline):
                 model = model.cuda()
                 # op
                 op = optim_type(model.parameters(), lr=info.lr)
+                logging.info(f'use optimizer: {op}')
                 # env
                 train_args = self._oargs['training']
                 env = {

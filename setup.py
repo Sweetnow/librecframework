@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='librecframework',
-    version='1.1.10',
+    version='1.2.0',
     packages=find_packages(),
     install_requires=[
         'numpy>=1.17.2',

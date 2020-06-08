@@ -138,12 +138,12 @@ class TrainDataset(DatasetBase):
         super().__init__(path, name, 'train', funcs)
 
         # prepare negative sample
+        self.init_epoch()
         self.max_epoch, self.num_worker = max_epoch, num_worker
         self.tag = sample_tag
         self.neg_qs = None
         self.use_backup = use_backup
         self.sample(funcs.sample, self.tag, seed, self.use_backup)
-        self.init_epoch()
         logging.debug('finish loading neg sample')
 
     def init_epoch(self) -> None:

@@ -44,7 +44,11 @@ def test(model: Model,
                 pred = model.evaluate(before, **data)
                 pred -= _MAX * train_mask
             else:
-                pred = model(**data)[0]
+                modelout = model(**data)
+                if isinstance(modelout, tuple):
+                    pred = modelout[0]
+                else:
+                    pred = modelout
             for metric in metrics:
                 metric(pred, ground_truth)
     logging.debug(f'Test: time={int(time()-start):d}s')

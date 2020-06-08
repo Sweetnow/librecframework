@@ -68,11 +68,13 @@ class EmbeddingBasedModel(Model):
             self,
             info,
             dataset: DatasetBase,
-            create_embeddings: bool):
+            create_embeddings: bool,
+            hasL2: bool = True):
         super().__init__()
         self.info = info
         self.embedding_size = info.embedding_size
-        self._L2 = L2Loss(info.L2)
+        if hasL2:
+            self._L2 = L2Loss(info.L2)
         self.num_ps = dataset.num_ps
         self.num_qs = dataset.num_qs
         if create_embeddings:
