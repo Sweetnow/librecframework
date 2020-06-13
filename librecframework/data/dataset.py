@@ -81,6 +81,7 @@ class DatasetBase(Dataset):
         pos_pairs = [x[0:2] for x in records]
         indice = np.array(pos_pairs, dtype=np.int32)
         values = np.ones(len(pos_pairs), dtype=np.float32)
+        # FIXME: if the same index pair appears many times, the value will be not equal to one 
         ground_truth = sp.coo_matrix(
             (values, (indice[:, 0], indice[:, 1])), shape=(self.num_ps, self.num_qs)).tocsr()
         return records, pos_pairs, ground_truth
