@@ -54,7 +54,7 @@ def train(model: Model,
         if i % log_interval == 0:
             now_cnt = (i + 1) * loader.batch_size
             all_cnt = len(loader.dataset)
-            prt = 100. * (i+1) / len(loader)
+            prt = 100. * (i + 1) / len(loader)
             logging.info(
                 f'Train Epoch: {epoch} [{now_cnt}/{all_cnt} ({prt:.0f}%)]\tLoss: {loss.item():.6f}')
     logging.debug(f'Train Epoch: {epoch}: time = {int(time() - start):d}s')

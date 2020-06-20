@@ -68,7 +68,7 @@ class DatasetBase(Dataset):
         with open(self.path / self.name / 'data_size.txt', 'r') as f:
             num_users, num_items = [
                 int(s) for s in f.readline().strip().split('\t')][:2]
-            return (num_users, num_items)
+            return num_users, num_items
 
     def _load_records(self, record_func) -> Tuple[list, list, sp.csr_matrix]:
         '''

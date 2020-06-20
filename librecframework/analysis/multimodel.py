@@ -20,7 +20,8 @@ __all__ = ['multimodel_performance_reporter']
 def multimodel_performance_reporter(
         config: Dict[str, str],
         output: Union[str, Path],
-        metric_tag: str = 'best') -> None:
+        metric_tag: str = 'best',
+        check_name: bool = True) -> None:
     metrics = {}
     hyperparameters = {}
     metrics_name = []
@@ -33,9 +34,10 @@ def multimodel_performance_reporter(
         if len(metadatas) > 1:
             raise ValueError(f'the number of metadata is more than one {v}')
         metadata = metadatas[0]
-        if k != metadata['model']:
-            raise ValueError(
-                f"model names are not the same {k} - {metadata['model']}")
+        if check_name:
+            if k != metadata['model']:
+                raise ValueError(
+                    f"model names are not the same {k} - {metadata['model']}")
         metrics[k] = metadata['metrics'][metric_tag]
         hyperparameters[k] = metadata['info']._asdict()
         for metric in metrics[k].keys():
