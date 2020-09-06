@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Tuple, Dict, Any, Optional
+from typing import Tuple, Dict, Any
 from abc import ABC, abstractmethod
 from collections import defaultdict
 import torch
@@ -27,25 +27,25 @@ class Model(nn.Module, ABC):
         return
 
     @abstractmethod
-    def forward(self, *args, **kwargs):
+    def forward(self, *args, **kwargs) -> Any:
         '''
         input args should match dataset `__getitem__` return values
         '''
         return
 
     @abstractmethod
-    def calculate_loss(self, modelout: tuple, batch_size: int):
+    def calculate_loss(self, modelout: tuple, batch_size: int) -> torch.Tensor:
         '''
         `modelout` will be `forward` return values
         '''
         return
 
     @abstractmethod
-    def before_evaluate(self):
+    def before_evaluate(self) -> Any:
         return
 
     @abstractmethod
-    def evaluate(self, before, *args, **kwargs):
+    def evaluate(self, before: Any, *args, **kwargs):
         '''
         `before` will be `before_evaluate` return values
         '''
@@ -79,10 +79,10 @@ class EmbeddingBasedModel(Model):
         self.num_qs = dataset.num_qs
         if create_embeddings:
             # embeddings
-            self.ps_feature = nn.Parameter(
+            self.ps_feature: nn.Parameter = nn.Parameter(
                 torch.FloatTensor(self.num_ps, self.embedding_size))
             nn.init.xavier_normal_(self.ps_feature)
-            self.qs_feature = nn.Parameter(
+            self.qs_feature: nn.Parameter = nn.Parameter(
                 torch.FloatTensor(self.num_qs, self.embedding_size))
             nn.init.xavier_normal_(self.qs_feature)
 

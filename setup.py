@@ -5,11 +5,12 @@ from setuptools import setup, find_packages
 
 setup(
     name='librecframework',
-    version='1.2.0',
+    version='1.3.0',
     packages=find_packages(),
     install_requires=[
         'numpy>=1.17.2',
         'scipy>=1.3.1',
+        #'tensorboard>=1.15.0',
         'visdom==0.1.8.9',
         'setproctitle>=1.1.10',
         'torch>=1.2.0',

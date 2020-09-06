@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Union, Dict, Union
+from typing import Callable, Union, Dict, Union
 from argparse import ArgumentParser, _ArgumentGroup
 import re
 from . import Argument
@@ -10,7 +10,8 @@ __all__ = ['add_float_argument', 'add_int_argument',
            'add_str_argument', 'add_bool_argument']
 
 
-def _add_argument_factory(dtype: type):
+def _add_argument_factory(dtype: type) -> Callable[
+        [Union[ArgumentParser, _ArgumentGroup], Argument, Union[type, str]], None]:
     def _add_argument(
             parser: Union[ArgumentParser, _ArgumentGroup],
             arg: Argument,

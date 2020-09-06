@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Optional, List
+from typing import Optional, cast
 import warnings
 import torch
 import torch.nn as nn
@@ -30,9 +30,9 @@ class L2Loss(_Loss):
 
     def forward(
             self,
-            *tensors: List[torch.Tensor],
+            *tensors: torch.Tensor,
             batch_size: Optional[int] = None) -> torch.Tensor:
-        loss = 0
+        loss = cast(torch.Tensor, 0)
         for tensor in tensors:
             loss = loss + (tensor ** 2).sum()
         loss = loss * self.weight

@@ -7,11 +7,11 @@ import string
 import random
 from json import dump
 from pathlib import Path
-from typing import List, Tuple, Optional, Union, Dict
+from typing import List, Tuple, Optional, Union, Dict, DefaultDict
 from collections import defaultdict
 import torch
 from .utils.training import metrics_sliding_max
-from .metric import _Metric
+from .metric import Metric
 from .trainhook import TrainHook
 
 # pylint: disable=W0201
@@ -49,17 +49,22 @@ class Logger():
         if checkpoint_policy == 'always':
             assert checkpoint_interval > 0 and isinstance(
                 checkpoint_interval, int)
+            checkpoint_targets = None
         elif checkpoint_policy == 'best':
-            if isinstance(checkpoint_target, (list, tuple)):
-                for target in checkpoint_target:
-                    assert isinstance(target, str)
+            if not isinstance(checkpoint_target, (list, tuple)):
+                checkpoint_targets = [checkpoint_target]
             else:
-                checkpoint_target = [checkpoint_target]
+                checkpoint_targets = checkpoint_target
+            for target in checkpoint_targets:
+                assert isinstance(
+                    target, str), f'{checkpoint_targets} are not all string'
+        else:
+            checkpoint_targets = None
 
         self.checkpoint_policy = checkpoint_policy
         self.checkpoint_interval = checkpoint_interval
         self.checkpoint_epoch = 0
-        self.checkpoint_target = checkpoint_target
+        self.checkpoint_target = checkpoint_targets
 
         self.random = ''.join(random.choice(
             string.ascii_uppercase + string.digits) for _ in range(4))
@@ -113,8 +118,9 @@ class Logger():
         self.window_size = window_size
         self.modelinfo = modelinfo
         self.env = envinfo
-        self._metrics_log = defaultdict(list)
-        self._trainhooks_log = defaultdict(list)
+
+        self._metrics_log: Dict[str, List[float]] = defaultdict(list)
+        self._trainhooks_log: Dict[str, List[float]] = defaultdict(list)
         self.cnt += 1
 
         # update model json
@@ -141,7 +147,7 @@ class Logger():
             self._trainhooks_log[v.title] += [v.value]
         self._update_log()
 
-    def update_metrics_and_model(self, metrics: List[_Metric], model: torch.nn.Module):
+    def update_metrics_and_model(self, metrics: List[Metric], model: torch.nn.Module):
         # save metrics
         for metric in metrics:
             metric_str = str(metric)

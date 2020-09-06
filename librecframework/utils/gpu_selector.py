@@ -4,7 +4,6 @@
 from typing import List
 import logging
 import time
-from collections import namedtuple
 import numpy as np
 from pynvml import *
 

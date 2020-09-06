@@ -7,9 +7,6 @@
 # metrics table and best hyperparameters or two files
 
 from typing import Dict, Union
-import os
-import argparse
-import json
 from pathlib import Path
 from collections import defaultdict
 import pandas as pd
@@ -30,7 +27,7 @@ def multimodel_performance_reporter(
     hyperparameters_name_ignore = set()
     models = list(config.keys())
     for k, v in config.items():
-        metadatas, _ = path_to_saved_log(v)
+        metadatas, _ = path_to_saved_log(Path(v))
         if len(metadatas) > 1:
             raise ValueError(f'the number of metadata is more than one {v}')
         metadata = metadatas[0]

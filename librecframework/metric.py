@@ -3,21 +3,22 @@
 
 # pylint: disable=W0603,W0201
 
+from typing import Dict, Any
 from abc import ABC, abstractmethod
 import torch
 
 __all__ = ['Precision', 'Recall', 'NDCG', 'MRR',
-           'LeaveOneHR', 'LeaveOneNDCG', 'LeaveOneMRR']
+           'LeaveOneHR', 'LeaveOneNDCG', 'LeaveOneMRR', 'Metric']
 
-_is_hit_cache = {}
+is_hit_cache: Dict[int, Dict[str, Any]] = {}
 
 
 def _get_is_hit(scores: torch.Tensor, ground_truth: torch.Tensor, topk: int) -> torch.Tensor:
     # cache
-    global _is_hit_cache
+    global is_hit_cache
     cacheid = (id(scores), id(ground_truth))
-    if topk in _is_hit_cache and _is_hit_cache[topk]['id'] == cacheid:
-        return _is_hit_cache[topk]['is_hit']
+    if topk in is_hit_cache and is_hit_cache[topk]['id'] == cacheid:
+        return is_hit_cache[topk]['is_hit']
     else:
         device = scores.device
         # indice tensor generate
@@ -30,11 +31,11 @@ def _get_is_hit(scores: torch.Tensor, ground_truth: torch.Tensor, topk: int) -> 
         is_hit = ground_truth[row_indice.reshape(-1),
                               col_indice.reshape(-1)].view(-1, topk)
         # cache
-        _is_hit_cache[topk] = {'id': cacheid, 'is_hit': is_hit}
+        is_hit_cache[topk] = {'id': cacheid, 'is_hit': is_hit}
         return is_hit
 
 
-class _Metric(ABC):
+class Metric(ABC):
     '''
     base class of metrics like HR@k NDCG@k
     '''
@@ -58,19 +59,19 @@ class _Metric(ABC):
         '''
         clear all
         '''
-        global _is_hit_cache
-        _is_hit_cache = {}
-        self._cnt = 0
-        self._metric = 0
-        self._sum = 0
+        global is_hit_cache
+        is_hit_cache = {}
+        self._cnt: float = 0
+        self._metric: float = 0
+        self._sum: float = 0
 
     def stop(self) -> None:
-        global _is_hit_cache
-        _is_hit_cache = {}
+        global is_hit_cache
+        is_hit_cache = {}
         self._metric = self._sum / self._cnt
 
 
-class TopkMetric(_Metric):
+class TopkMetric(Metric):
     def __init__(self, topk: int):
         super().__init__()
         self.topk = topk
@@ -119,7 +120,7 @@ class NDCG(TopkMetric):
 
     def __init__(self, topk: int) -> None:
         super().__init__(topk)
-        self.IDCGs = torch.FloatTensor(
+        self.IDCGs: torch.Tensor = torch.FloatTensor(
             [1] + [self.IDCG(i) for i in range(1, self.topk + 1)])
 
     def __call__(self, scores: torch.Tensor, ground_truth: torch.Tensor) -> None:
@@ -172,8 +173,9 @@ class LeaveOneNDCG(TopkMetric):
 
     def __init__(self, topk: int) -> None:
         super().__init__(topk)
-        self.NDCGs = 1 / \
-            torch.log2(torch.arange(2, self.topk + 2, dtype=torch.float))
+        self.NDCGs: torch.Tensor = 1 / \
+            torch.log2(torch.arange(2, self.topk + 2,
+                                    dtype=torch.float))
         self.NDCGs.unsqueeze_(0)
 
     def __call__(self, scores: torch.Tensor, ground_truth: torch.Tensor) -> None:

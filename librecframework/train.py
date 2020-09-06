@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Optional, Dict
+from typing import Optional, Dict, cast
 from math import ceil
 from time import time
 import logging
-import torch.optim as optim
+from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 from .model import Model
 from .trainhook import TrainHook
+from .data.dataset import TrainDataset
 
 _line = 10
 
@@ -26,7 +27,7 @@ def _log_interval_infer(loader: DataLoader) -> int:
 def train(model: Model,
           epoch: int,
           loader: DataLoader,
-          op: optim.Optimizer,
+          op: Optimizer,
           trainhooks: Dict[str, TrainHook],
           log_interval: Optional[int] = None) -> None:
     '''
@@ -61,4 +62,4 @@ def train(model: Model,
     for v in trainhooks.values():
         v.stop()
         logging.info(f'{v.title}:{v.value}')
-    loader.dataset.next_epoch()
+    cast(TrainDataset, loader.dataset).next_epoch()

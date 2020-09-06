@@ -10,10 +10,9 @@ __all__ = ['metrics_sliding_max', 'check_overfitting', 'early_stop']
 def metrics_sliding_max(
         metrics_log: Dict[str, List[float]],
         window_size: int,
-        target: str) -> Dict[str, List[float]]:
+        target: str) -> Dict[str, float]:
     # max
-    maxs = {title: 0 for title in metrics_log.keys()}
-    assert target in maxs
+    maxs: Dict[str, float] = {title: 0 for title in metrics_log.keys()}
     length = len(metrics_log[target])
     for v in metrics_log.values():
         assert length == len(v)
@@ -40,7 +39,7 @@ def check_overfitting(
 
 
 def early_stop(
-        metric_log: Dict[str, List[float]],
+        metric_log: List[float],
         early: int,
         threshold: float = 0) -> int:
     if len(metric_log) >= 2 and metric_log[-1] < metric_log[-2] and metric_log[-1] > threshold:

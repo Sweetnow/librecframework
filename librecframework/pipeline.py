@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Union, List, Dict, Any, Optional
+from typing import Union, List, Dict, Any, Optional, Type
 from pathlib import Path
 from abc import ABC, abstractmethod
 import json
@@ -22,7 +22,7 @@ from .model import Model
 from .logger import Logger
 from .train import train
 from .test import fully_ranking_test, leave_one_out_test
-from .metric import _Metric
+from .metric import Metric
 from .trainhook import TrainHook, ValueMeanHook
 
 # pylint: disable=W0221
@@ -178,7 +178,7 @@ class _DefaultTrainPipeline(Pipeline):
 
     def during_running(
             self,
-            model_class: Model,
+            model_class: Type[Model],
             other_args: Dict[str, Any],
             trainhooks: Optional[Dict[str, TrainHook]] = None,
             optim_type=torch.optim.Adam):
@@ -398,7 +398,7 @@ class _DefaultTestPipeline(Pipeline):
             metrics_args['target']['type'],
             metrics_args['target']['topk'])
 
-        self.infos, self.dataset = path_to_saved_model(self._eam['file'])
+        self.infos, self.dataset = path_to_saved_model(Path(self._eam['file']))
 
         # dataset
         dataset_args = self._oargs['dataset']
@@ -427,7 +427,7 @@ class _DefaultTestPipeline(Pipeline):
             pin_memory=self.pin_memory
         )
 
-    def during_running(self, model_class: Model, other_args: Dict[str, Any]):
+    def during_running(self, model_class: Type[Model], other_args: Dict[str, Any]):
         self.model_class = model_class
         modelname = self.model_class.__name__
         target = str(self.target_metric)
@@ -595,7 +595,7 @@ class _DefaultPipeline(Pipeline):
 
     def during_running(
             self,
-            model_class: Model,
+            model_class: Type[Model],
             other_args: Dict[str, Any],
             trainhooks: Optional[Dict[str, TrainHook]] = None,
             optim_type=torch.optim.Adam):
