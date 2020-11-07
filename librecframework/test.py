@@ -71,15 +71,9 @@ def test(model: Model,
     print('')
 
 
-<<<<<<< Updated upstream
-fully_ranking_test: Callable[[Model, DataLoader, List[Metric]], None] = partial(
-    test, mode='fully-ranking')
-leave_one_out_test: Callable[[Model, DataLoader, List[Metric]], None] = partial(
-    test, mode='leave-one-out')
-=======
 def fully_ranking_test(model: Model,
                        loader: DataLoader,
-                       metrics: List[_Metric]
+                       metrics: List[Metric]
                        ) -> None:
     """
     Evaluate model by fully ranking
@@ -97,7 +91,7 @@ def fully_ranking_test(model: Model,
 
 def leave_one_out_test(model: Model,
                        loader: DataLoader,
-                       metrics: List[_Metric]
+                       metrics: List[Metric]
                        ) -> None:
     """
     Evaluate model by leave-one-out
@@ -111,4 +105,3 @@ def leave_one_out_test(model: Model,
     - ValueError: the mode flag is invalid
     """
     return test(model, loader, metrics, 'leave-one-out')
->>>>>>> Stashed changes

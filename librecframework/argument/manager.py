@@ -3,7 +3,7 @@
 
 import os
 from collections import namedtuple, OrderedDict
-from typing import List, Dict, Optional, Type, TypeVar, Union, Callable, Any
+from typing import List, Dict, Optional, Type, TypeVar, Union, Callable, Any, cast
 from argparse import ArgumentParser, Action
 from itertools import product
 from multiprocessing import cpu_count
@@ -390,7 +390,7 @@ def default_env_argument_manager(
         ['-D', '--device'],
         dtype=int,
         multi=True,
-        validator=lambda x: torch.cuda.device_count() > x >= 0,
+        validator=lambda x: torch.cuda.device_count() > cast(int, x) >= 0,
         helpstr=f'Which GPU 0-{torch.cuda.device_count() - 1}',
         default=list(range(torch.cuda.device_count()))
     )

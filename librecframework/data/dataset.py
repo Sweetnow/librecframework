@@ -61,7 +61,7 @@ class DatasetBase(Dataset):
     def __getitem__(self, index):
         return self.funcs.getitem(self, index)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.funcs.length(self)
 
     def _load_data_size(self):

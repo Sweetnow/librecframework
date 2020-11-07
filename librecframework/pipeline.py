@@ -198,9 +198,7 @@ class _DefaultTrainPipeline(Pipeline):
         logger_args = self._oargs['logger']
         logpath = Path(logger_args['path']) / modelname / \
             f"{self._eam['dataset']}_{self.task}"/self._eam['tag']
-        self.log = Logger(
-            logpath, logger_args['policy'],
-            checkpoint_target=target)
+        self.log = Logger(logpath, logger_args['policy'])
         pretrain = 'pretrain' in self._hpm and self._hpm['pretrain']
         gpu_id = autoselect(self._eam['device'], self.min_memory)
         with torch.cuda.device(gpu_id):

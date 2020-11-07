@@ -18,7 +18,7 @@ __all__ = ['train']
 
 def _log_interval_infer(loader: DataLoader) -> int:
     """Infer the log interval to show 10 lines log each epoch"""
-    batch_cnt = ceil(len(loader.dataset) / loader.batch_size)
+    batch_cnt = ceil(len(cast(TrainDataset, loader.dataset)) / cast(int, loader.batch_size))
     if batch_cnt < _line:
         return 1
     else:
@@ -52,19 +52,20 @@ def train(model: Model,
         v.start()
     start = time()
     for i, data in enumerate(loader):
+        batch_size = cast(int, loader.batch_size)
         op.zero_grad()
         for k, v in data.items():
             data[k] = v.cuda()
         modelout = model(**data)
-        loss = model.calculate_loss(modelout, batch_size=loader.batch_size)
+        loss = model.calculate_loss(modelout, batch_size=batch_size)
         if '__loss__' in trainhooks:
             trainhooks['__loss__'](loss.item())
         loss.backward()
         op.step()
         if i % log_interval == 0:
-            now_cnt = (i + 1) * loader.batch_size
-            all_cnt = len(loader.dataset)
-            prt = 100. * (i + 1) / len(loader)
+            now_cnt = (i + 1) * batch_size
+            all_cnt = len(cast(TrainDataset, loader.dataset))
+            prt = 100 * (i + 1) / len(loader)
             logging.info(
                 f'Train Epoch: {epoch} [{now_cnt}/{all_cnt} ({prt:.0f}%)]\tLoss: {loss.item():.6f}')
     logging.debug(f'Train Epoch: {epoch}: time = {int(time() - start):d}s')

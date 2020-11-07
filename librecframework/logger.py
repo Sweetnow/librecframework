@@ -7,7 +7,7 @@ import string
 import random
 from json import dump
 from pathlib import Path
-from typing import Any, List, Tuple, Optional, Union, Dict
+from typing import Any, List, Dict, NamedTuple
 from collections import defaultdict
 import torch
 import torch.nn as nn
@@ -19,6 +19,8 @@ from .trainhook import TrainHook
 
 __all__ = ['Logger']
 
+_MAX: int = 2**31
+
 
 def _hash_model(modelinfo: Any) -> str:
     """Obtain unique ID to identify model"""
@@ -29,78 +31,66 @@ class Logger():
     """
     Utility that save models with metrics by specific policy and record all values during training in `log_path`.
 
+    Used as CONTEXT MANAGER
+
     Supported policies:
     - `none`: record nothing
     - `always`: record the last one
-    - `best`: record the best one accroding to `checkpoint_target` (default)
+    - `best`: record the best one accroding to model-specific target (default)
     """
 
     # policies for model saving
     CHECKPOINT_POLICIES = ['none', 'always', 'best']
 
     def __init__(self,
-                 log_path: Union[Path, str],
-                 checkpoint_policy: str = 'best',
-                 checkpoint_interval: Optional[int] = None,
-                 checkpoint_target: Optional[Union[str, Tuple[str], List[str]]] = None) -> None:
+                 log_path: Path,
+                 policy: str = 'best',
+                 interval: int = _MAX) -> None:
         """
         Args:
         - log_path: the dir of every model's log dir
-        - checkpoint_policy: when to save model. [ `none` | `always` | `best` (default)]
+        - policy: when to save model. [ `none` | `always` | `best` (default)]
             - `none`: never save model
-            - `always`: save model every `checkpoint_interval` epochs
-            - `best`: save the best(`checkpoint_target`) model
-        - checkpoint_interval: int, for `always`
-        - checkpoint_target: str or list of str, for `best`
+            - `always`: save model every `interval` epochs
+            - `best`: save the best model by model-specific target
+        - interval: int, for `always`
         """
-        assert checkpoint_policy in Logger.CHECKPOINT_POLICIES
-        if checkpoint_policy == 'always':
-            assert checkpoint_interval > 0 and isinstance(
-                checkpoint_interval, int)
-            checkpoint_targets = None
-        elif checkpoint_policy == 'best':
-            if not isinstance(checkpoint_target, (list, tuple)):
-                checkpoint_targets = [checkpoint_target]
-            else:
-                checkpoint_targets = checkpoint_target
-            for target in checkpoint_targets:
-                assert isinstance(
-                    target, str), f'{checkpoint_targets} are not all string'
-        else:
-            checkpoint_targets = None
+        assert policy in Logger.CHECKPOINT_POLICIES
+        if policy == 'always':
+            assert _MAX > interval > 0
 
-        self.checkpoint_policy = checkpoint_policy
-        self.checkpoint_interval = checkpoint_interval
-        self.checkpoint_epoch = 0
-        self.checkpoint_target = checkpoint_targets
+        self.policy = policy
+        self.interval = interval
+        self.epoch = 0
 
         self.random = ''.join(random.choice(
             string.ascii_uppercase + string.digits) for _ in range(4))
-        self.log_path = Path(log_path)
+        self.log_path = log_path
         self.time_path = time.strftime(
             '%m-%d-%H-%M-%S-', time.localtime(time.time()))+self.random
 
         self.root_path = self.log_path / self.time_path
-        if not os.path.exists(self.root_path):
+        if not self.root_path.exists():
             os.makedirs(self.root_path)
         else:
             raise FileExistsError(f'{self.root_path} exists')
 
         self.log = self.root_path / 'model.json'
-        self.__all_infos = []
-        self.cnt = 0
+        self.__all_infos: List[Dict[str, Any]] = []
+        self.cnt: int = 0
 
     @property
     def all_infos(self):
+        """The content of `model.json`"""
         return self.__all_infos
 
     @all_infos.setter
-    def all_infos(self, value: List):
+    def all_infos(self, value: List[Dict[str, Any]]):
         self.__all_infos = value
         with open(self.log, 'w') as f:
             dump(self.__all_infos, f, indent=4)
 
-    def get_model_id(self, modelinfo) -> str:
+    def get_model_id(self, modelinfo: Any) -> str:
         return f'{self.cnt}_{_hash_model(modelinfo)}'
 
     def __enter__(self):
@@ -112,15 +102,17 @@ class Logger():
     def update_modelinfo(
             self,
             modelname: str,
-            modelinfo,
-            envinfo: dict,
+            modelinfo: NamedTuple,
+            envinfo: Dict[str, Any],
             target: str,
-            window_size: int = 10):
-        '''
-        args:
-        - `modelinfo`:  model hyperparameters (`ModelInfo`)
-        - `envinfo`:    other hyperparameters like (`lr`) (`Dict`)
-        '''
+            window_size: int = 10) -> 'Logger':
+        """
+        Append the information of the next model into `model.json` and reset metric and trainhook logs
+
+        Args:
+        - modelinfo:  model hyperparameters
+        - envinfo:    other hyperparameters like `lr`
+        """
         # set key variables
         self.target = target
         self.window_size = window_size
@@ -144,6 +136,7 @@ class Logger():
         return self
 
     def _update_log(self):
+        """Update the model's log file `${model_id}.json`"""
         with open(self.root_path / f'{self.get_model_id(self.modelinfo)}.json', 'w') as f:
             dump({
                 'metrics': self._metrics_log,
@@ -151,36 +144,41 @@ class Logger():
             }, f)
 
     def update_trainhooks(self, trainhooks: Dict[str, TrainHook]):
+        """Add the value of each trainhook into the corresponding list and save"""
         for v in trainhooks.values():
             self._trainhooks_log[v.title] += [v.value]
         self._update_log()
 
     def update_metrics_and_model(self, metrics: List[Metric], model: nn.Module):
+        """Add the value of each metric into the corresponding list and save the model aaccording to the policy"""
         # save metrics
         for metric in metrics:
-            metric_str = str(metric)
-            self._metrics_log[metric_str] += [metric.metric]
+            self._metrics_log[str(metric)] += [metric.metric]
         self._update_log()
+
         # save model
-        if self.checkpoint_policy == 'always':
-            self.checkpoint_epoch += 1
-            if self.checkpoint_epoch % self.checkpoint_interval == 0:
-                model_path = self.root_path / \
-                    f'{self.get_model_id(self.modelinfo)}.pth'
-                torch.save(model.state_dict(), model_path)
-        elif self.checkpoint_policy == 'best':
-            for target in self.checkpoint_target:
-                if self.metrics_log[target][-1] == max(self.metrics_log[target]):
-                    model_path = self.root_path / \
-                        f'{self.get_model_id(self.modelinfo)}_{target}.pth'
-                    torch.save(model.state_dict(), model_path)
+        tag = None
+        if self.policy == 'always':
+            self.epoch += 1
+            if self.epoch % self.interval == 0:
+                tag = 'always'
+        elif self.policy == 'best':
+            if self.metrics_log[self.target][-1] == max(self.metrics_log[self.target]):
+                tag = self.target
+        if tag is not None:
+            model_path = self.root_path / \
+                f'{self.get_model_id(self.modelinfo)}_{tag}.pth'
+            torch.save(model.state_dict(), model_path)
 
         # update model json
-        best = metrics_sliding_max(self.metrics_log,
-                                   window_size=1, target=self.target)
+        best = metrics_sliding_max(
+            self.metrics_log,
+            window_size=1,
+            target=self.target)
         ave = metrics_sliding_max(
             self.metrics_log,
-            window_size=self.window_size, target=self.target
+            window_size=self.window_size,
+            target=self.target
         )
         all_infos = self.all_infos
         all_infos[-1]['metrics'] = {'best': best,
@@ -189,8 +187,10 @@ class Logger():
 
     @property
     def metrics_log(self):
+        """The log of metric history"""
         return self._metrics_log
 
     @property
     def trainhooks_log(self):
+        """The log of trainhook history"""
         return self._trainhooks_log
