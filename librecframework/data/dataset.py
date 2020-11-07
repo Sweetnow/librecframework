@@ -81,7 +81,7 @@ class DatasetBase(Dataset):
         pos_pairs = [x[0:2] for x in records]
         indice = np.array(pos_pairs, dtype=np.int32)
         values = np.ones(len(pos_pairs), dtype=np.float32)
-        # FIXME: if the same index pair appears many times, the value will be not equal to one 
+        # FIXME: if the same index pair appears many times, the value will be not equal to one
         ground_truth = sp.coo_matrix(
             (values, (indice[:, 0], indice[:, 1])), shape=(self.num_ps, self.num_qs)).tocsr()
         return records, pos_pairs, ground_truth
@@ -90,7 +90,7 @@ class DatasetBase(Dataset):
         try:
             with open(self.path / self.name / 'social_relation.txt', 'r') as f:
                 friends = [[int(one) for one in line.strip().split('\t')]
-                        for line in f]
+                           for line in f]
             indice = []
             friend_dict = defaultdict(set)
             for u1, u2 in friends:

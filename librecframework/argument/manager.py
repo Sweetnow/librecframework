@@ -326,7 +326,7 @@ def default_loader_argument_manager(train_or_test: str, default_test_batch: int 
             dtype=int,
             validator=lambda x: cpu_count() >= x >= 0,
             helpstr='train loader batch woker',
-            default=8
+            default=min(8, cpu_count())
         )
 
     if train_or_test in ('test', 'both'):
@@ -344,7 +344,7 @@ def default_loader_argument_manager(train_or_test: str, default_test_batch: int 
             dtype=int,
             validator=lambda x: cpu_count() >= x >= 0,
             helpstr='test loader batch woker',
-            default=4
+            default=min(4, cpu_count())
         )
     return manager
 

@@ -4,7 +4,6 @@
 from time import time
 from typing import List, Callable
 import logging
-from functools import partial
 import torch
 from torch.utils.data import DataLoader
 from .metric import Metric
@@ -21,9 +20,18 @@ def test(model: Model,
          loader: DataLoader,
          metrics: List[Metric],
          mode: str) -> None:
-    '''
-    test model
-    '''
+    """
+    Evaluate model
+
+    Args:
+    - model: the model for evaluation
+    - loader: the corresponding dataloader for evaluation
+    - metrics: the list of metrics
+    - mode: the evaluation model, `fully-ranking` or `leave-one-out`
+
+    Exception:
+    - ValueError: the mode flag is invalid
+    """
     if mode not in _MODE_NAME:
         raise ValueError(f'mode {mode} should be in {_MODE_NAME}.')
 
@@ -50,7 +58,10 @@ def test(model: Model,
                 for k, v in data.items():
                     data[k] = v.cuda()
                 modelout = model(**data)
-                pred = modelout[0] if isinstance(modelout, tuple) else modelout
+                if isinstance(modelout, tuple):
+                    pred = modelout[0]
+                else:
+                    pred = modelout
                 for metric in metrics:
                     metric(pred, ground_truth)
     logging.debug(f'Test: time={int(time()-start):d}s')
@@ -60,7 +71,44 @@ def test(model: Model,
     print('')
 
 
+<<<<<<< Updated upstream
 fully_ranking_test: Callable[[Model, DataLoader, List[Metric]], None] = partial(
     test, mode='fully-ranking')
 leave_one_out_test: Callable[[Model, DataLoader, List[Metric]], None] = partial(
     test, mode='leave-one-out')
+=======
+def fully_ranking_test(model: Model,
+                       loader: DataLoader,
+                       metrics: List[_Metric]
+                       ) -> None:
+    """
+    Evaluate model by fully ranking
+
+    Args:
+    - model: the model for evaluation
+    - loader: the corresponding dataloader for evaluation
+    - metrics: the list of metrics
+
+    Exception:
+    - ValueError: the mode flag is invalid
+    """
+    return test(model, loader, metrics, 'fully-ranking')
+
+
+def leave_one_out_test(model: Model,
+                       loader: DataLoader,
+                       metrics: List[_Metric]
+                       ) -> None:
+    """
+    Evaluate model by leave-one-out
+
+    Args:
+    - model: the model for evaluation
+    - loader: the corresponding dataloader for evaluation
+    - metrics: the list of metrics
+
+    Exception:
+    - ValueError: the mode flag is invalid
+    """
+    return test(model, loader, metrics, 'leave-one-out')
+>>>>>>> Stashed changes

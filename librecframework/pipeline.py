@@ -10,6 +10,7 @@ import logging
 import setproctitle
 import torch
 from torch.utils.data import DataLoader
+from torch.optim import Adam
 from .argument.manager import HyperparamManager, \
     default_loader_argument_manager, default_env_argument_manager
 from .data import DatasetFuncs
@@ -181,7 +182,7 @@ class _DefaultTrainPipeline(Pipeline):
             model_class: Type[Model],
             other_args: Dict[str, Any],
             trainhooks: Optional[Dict[str, TrainHook]] = None,
-            optim_type=torch.optim.Adam):
+            optim_type=Adam):
         '''
         `other_args` will be sended to `model.__init__` as key-value args
         '''
@@ -598,7 +599,7 @@ class _DefaultPipeline(Pipeline):
             model_class: Type[Model],
             other_args: Dict[str, Any],
             trainhooks: Optional[Dict[str, TrainHook]] = None,
-            optim_type=torch.optim.Adam):
+            optim_type=Adam):
         '''
         `other_args` will be sended to `model.__init__` as key-value args
         '''

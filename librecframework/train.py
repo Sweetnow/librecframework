@@ -17,6 +17,7 @@ __all__ = ['train']
 
 
 def _log_interval_infer(loader: DataLoader) -> int:
+    """Infer the log interval to show 10 lines log each epoch"""
     batch_cnt = ceil(len(loader.dataset) / loader.batch_size)
     if batch_cnt < _line:
         return 1
@@ -30,10 +31,18 @@ def train(model: Model,
           op: Optimizer,
           trainhooks: Dict[str, TrainHook],
           log_interval: Optional[int] = None) -> None:
-    '''
+    """
+    Train model
+
+    Args:
+    - model: the model for training
+    - epoch: the epoch ID
+    - loader: the corresponding dataloader for training
+    - op: the optimizer for training
+    - trainhooks: 
     if `log_interval`==`None`, log interval will be automatically set
     to ensure that 10 lines are shown per epoch.
-    '''
+    """
     if log_interval is None:
         log_interval = _log_interval_infer(loader)
 

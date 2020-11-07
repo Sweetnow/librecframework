@@ -85,6 +85,7 @@ def replay(path: Union[str, Path], config_path: Union[str, Path]):
             subenv=sub_env
         )
         for k, v in data['metrics'].items():
-            vis.update(k, list(range(0, test_interval * len(v), test_interval)), v)
+            vis.update(
+                k, list(range(0, test_interval * len(v), test_interval)), v)
         for k, v in data['trainhooks'].items():
             vis.update(k, list(range(0, len(v))), v)

@@ -18,5 +18,6 @@ setup(
     ],
     author='Jun Zhang',
     author_email='zhangjun990222@qq.com',
-    description='Python library for recommender system based on pytorch'
+    description='Python library for recommender system based on pytorch',
+    zip_safe = False
 )

@@ -49,7 +49,7 @@ class BPRLoss(_Loss):
         if inputs.shape[1] > 2:
             wstr = f'In BPRLoss, model_output/pred shape is {inputs.shape}, the second dim > 2'
             warnings.warn(wstr, RuntimeWarning)
-        loss = -F.logsigmoid(inputs[:, 0:1] - inputs[:, 1:])
+        loss: torch.Tensor = -F.logsigmoid(inputs[:, 0:1] - inputs[:, 1:])
         if self.reduction == 'mean':
             loss = torch.mean(loss)
         elif self.reduction == 'sum':

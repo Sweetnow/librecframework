@@ -7,9 +7,10 @@ import string
 import random
 from json import dump
 from pathlib import Path
-from typing import List, Tuple, Optional, Union, Dict, DefaultDict
+from typing import Any, List, Tuple, Optional, Union, Dict
 from collections import defaultdict
 import torch
+import torch.nn as nn
 from .utils.training import metrics_sliding_max
 from .metric import Metric
 from .trainhook import TrainHook
@@ -19,14 +20,21 @@ from .trainhook import TrainHook
 __all__ = ['Logger']
 
 
-def _hash_model(modelinfo):
+def _hash_model(modelinfo: Any) -> str:
+    """Obtain unique ID to identify model"""
     return hex(hash(modelinfo))[-6:]
 
 
 class Logger():
-    '''
-    Utility that save models and records
-    '''
+    """
+    Utility that save models with metrics by specific policy and record all values during training in `log_path`.
+
+    Supported policies:
+    - `none`: record nothing
+    - `always`: record the last one
+    - `best`: record the best one accroding to `checkpoint_target` (default)
+    """
+
     # policies for model saving
     CHECKPOINT_POLICIES = ['none', 'always', 'best']
 
@@ -35,7 +43,7 @@ class Logger():
                  checkpoint_policy: str = 'best',
                  checkpoint_interval: Optional[int] = None,
                  checkpoint_target: Optional[Union[str, Tuple[str], List[str]]] = None) -> None:
-        '''
+        """
         Args:
         - log_path: the dir of every model's log dir
         - checkpoint_policy: when to save model. [ `none` | `always` | `best` (default)]
@@ -44,7 +52,7 @@ class Logger():
             - `best`: save the best(`checkpoint_target`) model
         - checkpoint_interval: int, for `always`
         - checkpoint_target: str or list of str, for `best`
-        '''
+        """
         assert checkpoint_policy in Logger.CHECKPOINT_POLICIES
         if checkpoint_policy == 'always':
             assert checkpoint_interval > 0 and isinstance(
@@ -147,7 +155,7 @@ class Logger():
             self._trainhooks_log[v.title] += [v.value]
         self._update_log()
 
-    def update_metrics_and_model(self, metrics: List[Metric], model: torch.nn.Module):
+    def update_metrics_and_model(self, metrics: List[Metric], model: nn.Module):
         # save metrics
         for metric in metrics:
             metric_str = str(metric)

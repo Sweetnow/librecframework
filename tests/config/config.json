@@ -1,0 +1,50 @@
+{
+    "user": "pytest",
+    "visdom": {
+        "server": "127.0.0.1",
+        "port": {
+            "demo": 8097
+        }
+    },
+    "training": {
+        "test_interval": 1,
+        "early_stop": 10,
+        "overfit": {
+            "protected_epoch": 10,
+            "threshold": 0.1
+        }
+    },
+    "dataset": {
+        "path": "tests/dataset/",
+        "seed": 123,
+        "use_backup": true
+    },
+    "logger": {
+        "path": ".pytest_cache/log/",
+        "policy": "best"
+    },
+    "metric": {
+        "target": {
+            "type": "NDCG",
+            "topk": 10
+        },
+        "metrics": [
+            {
+                "type": "Recall",
+                "topk": 5
+            },
+            {
+                "type": "Recall",
+                "topk": 10
+            },
+            {
+                "type": "NDCG",
+                "topk": 5
+            },
+            {
+                "type": "NDCG",
+                "topk": 10
+            }
+        ]
+    }
+}

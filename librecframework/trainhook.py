@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 
 __all__ = ['TrainHook', 'ValueMeanHook']
 
+
 class TrainHook(ABC):
     '''
     base class of train hook like loss
@@ -41,6 +42,7 @@ class TrainHook(ABC):
             raise RuntimeError('motify _sum but not _cnt')
         else:
             self._value = self._sum / self._cnt
+
 
 class ValueMeanHook(TrainHook):
     def __call__(self, value: Union[float, int]) -> None:
