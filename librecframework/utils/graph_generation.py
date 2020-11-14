@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from typing import Union
 import numpy as np
 import scipy.sparse as sp
 import torch
@@ -17,7 +18,7 @@ def complete_graph_from_pq(
         normalize: str,
         dtype=None,
         return_scipy: bool = False,
-        eps: float = 1e-10) -> torch.Tensor:
+        eps: float = 1e-10) -> Union[torch.Tensor, sp.coo_matrix]:
     normalize = normalize.lower()
     assert normalize in ['none', 'out', 'in', 'laplace']
     pq_graph = pq_graph.tocoo()

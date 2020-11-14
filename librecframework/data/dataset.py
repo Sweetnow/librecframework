@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Tuple
+from typing import Callable, Dict, List, Set, Tuple, Union, Optional
 import sys
 import os
 from pathlib import Path
 from time import time
-from typing import Union, Optional
 from multiprocessing import Pool, cpu_count
 from collections import defaultdict
 import logging
@@ -19,7 +18,9 @@ __all__ = ['DatasetBase', 'TrainDataset',
            'FullyRankingTestDataset', 'LeaveOneOutTestDataset']
 
 
-def _sampler(args):
+def _sampler(args: Tuple[int, int, 'TrainDataset',
+                         Callable[['TrainDataset', int], int], dict]):
+    """sample negative qs using `onesampler` function"""
     seed, index, dataset, onesampler, other_args = args
     cnt = other_args['cnt']
     np.random.seed(seed)
@@ -42,11 +43,11 @@ class DatasetBase(Dataset):
 
     def __init__(
             self,
-            path: Union[str, Path],
+            path: Path,
             name: str,
             task: str,
             funcs: DatasetFuncs) -> None:
-        self.path, self.name, self.task = Path(path), name, task
+        self.path, self.name, self.task = path, name, task
         self.funcs = funcs
         self.num_ps, self.num_qs = self._load_data_size()
         self.num_users, self.num_items = self.num_ps, self.num_qs
@@ -58,22 +59,32 @@ class DatasetBase(Dataset):
     def _post_init(self):
         self.funcs.postinit(self)
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int):
         return self.funcs.getitem(self, index)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.funcs.length(self)
 
     def _load_data_size(self):
+        """load data size from `data_size.txt`"""
         with open(self.path / self.name / 'data_size.txt', 'r') as f:
             num_users, num_items = [
                 int(s) for s in f.readline().strip().split('\t')][:2]
             return num_users, num_items
 
-    def _load_records(self, record_func) -> Tuple[list, list, sp.csr_matrix]:
-        '''
-        one record: p, q, ...
-        '''
+    def _load_records(self, record_func: Callable[[List[List[int]]], List[List[int]]]) -> Tuple[List[List[int]], List[List[int]], sp.csr_matrix]:
+        """
+        load records from `train.txt`|`tune.txt`|`test.txt` as 
+        all records lists, positive records lists and graph
+
+        Args:
+        - record_func: the user-defined function that transform records
+
+        Returns:
+        - $0: the lists of the whole records in record file
+        - $1: the positive records lists in the first two columns of record file
+        - $2: the 1/0 sparse matrix as ground truth
+        """
         with open(self.path / self.name / f'{self.task}.txt', 'r') as f:
             records = [[int(one) for one in line.strip().split('\t')]
                        for line in f]
@@ -81,18 +92,19 @@ class DatasetBase(Dataset):
         pos_pairs = [x[0:2] for x in records]
         indice = np.array(pos_pairs, dtype=np.int32)
         values = np.ones(len(pos_pairs), dtype=np.float32)
-        # FIXME: if the same index pair appears many times, the value will be not equal to one 
+        # FIXME: if the same index pair appears many times, the value will be not equal to one
         ground_truth = sp.coo_matrix(
             (values, (indice[:, 0], indice[:, 1])), shape=(self.num_ps, self.num_qs)).tocsr()
         return records, pos_pairs, ground_truth
 
-    def _load_social_relation(self) -> Tuple[dict, sp.csr_matrix]:
+    def _load_social_relation(self) -> Tuple[Dict[int, Set[int]], sp.csr_matrix]:
+        """load social relation pairs from `social_relation.txt` as dict and graph"""
         try:
             with open(self.path / self.name / 'social_relation.txt', 'r') as f:
                 friends = [[int(one) for one in line.strip().split('\t')]
-                        for line in f]
+                           for line in f]
             indice = []
-            friend_dict = defaultdict(set)
+            friend_dict: Dict[int, Set[int]] = defaultdict(set)
             for u1, u2 in friends:
                 indice += [(u1, u2), (u2, u1)]
                 friend_dict[u1].add(u2)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Union, List, Dict, Any, Optional
+from typing import Union, List, Dict, Any, Optional, Type
 from pathlib import Path
 from abc import ABC, abstractmethod
 import json
@@ -10,6 +10,7 @@ import logging
 import setproctitle
 import torch
 from torch.utils.data import DataLoader
+from torch.optim import Adam
 from .argument.manager import HyperparamManager, \
     default_loader_argument_manager, default_env_argument_manager
 from .data import DatasetFuncs
@@ -22,7 +23,7 @@ from .model import Model
 from .logger import Logger
 from .train import train
 from .test import fully_ranking_test, leave_one_out_test
-from .metric import _Metric
+from .metric import Metric
 from .trainhook import TrainHook, ValueMeanHook
 
 # pylint: disable=W0221
@@ -143,7 +144,7 @@ class _DefaultTrainPipeline(Pipeline):
         # dataset
         dataset_args = self._oargs['dataset']
         self.train_data = TrainDataset(
-            path=dataset_args['path'],
+            path=Path(dataset_args['path']),
             name=self._eam['dataset'],
             num_worker=self._eam['sample_worker'],
             max_epoch=self._eam['sample_epoch'],
@@ -153,7 +154,7 @@ class _DefaultTrainPipeline(Pipeline):
             use_backup=dataset_args['use_backup']
         )
         self.test_data = self._test_dataset_type(
-            path=dataset_args['path'],
+            path=Path(dataset_args['path']),
             name=self._eam['dataset'],
             task=self.task,
             train_dataset=self.train_data,
@@ -178,10 +179,10 @@ class _DefaultTrainPipeline(Pipeline):
 
     def during_running(
             self,
-            model_class: Model,
+            model_class: Type[Model],
             other_args: Dict[str, Any],
             trainhooks: Optional[Dict[str, TrainHook]] = None,
-            optim_type=torch.optim.Adam):
+            optim_type=Adam):
         '''
         `other_args` will be sended to `model.__init__` as key-value args
         '''
@@ -197,9 +198,7 @@ class _DefaultTrainPipeline(Pipeline):
         logger_args = self._oargs['logger']
         logpath = Path(logger_args['path']) / modelname / \
             f"{self._eam['dataset']}_{self.task}"/self._eam['tag']
-        self.log = Logger(
-            logpath, logger_args['policy'],
-            checkpoint_target=target)
+        self.log = Logger(logpath, logger_args['policy'])
         pretrain = 'pretrain' in self._hpm and self._hpm['pretrain']
         gpu_id = autoselect(self._eam['device'], self.min_memory)
         with torch.cuda.device(gpu_id):
@@ -398,12 +397,12 @@ class _DefaultTestPipeline(Pipeline):
             metrics_args['target']['type'],
             metrics_args['target']['topk'])
 
-        self.infos, self.dataset = path_to_saved_model(self._eam['file'])
+        self.infos, self.dataset = path_to_saved_model(Path(self._eam['file']))
 
         # dataset
         dataset_args = self._oargs['dataset']
         self.train_data = TrainDataset(
-            path=dataset_args['path'],
+            path=Path(dataset_args['path']),
             name=self.dataset,
             num_worker=0,
             max_epoch=0,
@@ -413,7 +412,7 @@ class _DefaultTestPipeline(Pipeline):
             use_backup=False
         )
         self.test_data = self._test_dataset_type(
-            path=dataset_args['path'],
+            path=Path(dataset_args['path']),
             name=self.dataset,
             task=self.task,
             train_dataset=self.train_data,
@@ -427,7 +426,7 @@ class _DefaultTestPipeline(Pipeline):
             pin_memory=self.pin_memory
         )
 
-    def during_running(self, model_class: Model, other_args: Dict[str, Any]):
+    def during_running(self, model_class: Type[Model], other_args: Dict[str, Any]):
         self.model_class = model_class
         modelname = self.model_class.__name__
         target = str(self.target_metric)
@@ -595,10 +594,10 @@ class _DefaultPipeline(Pipeline):
 
     def during_running(
             self,
-            model_class: Model,
+            model_class: Type[Model],
             other_args: Dict[str, Any],
             trainhooks: Optional[Dict[str, TrainHook]] = None,
-            optim_type=torch.optim.Adam):
+            optim_type=Adam):
         '''
         `other_args` will be sended to `model.__init__` as key-value args
         '''

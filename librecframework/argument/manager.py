@@ -3,7 +3,7 @@
 
 import os
 from collections import namedtuple, OrderedDict
-from typing import List, Any, Optional, Union
+from typing import List, Dict, Optional, Type, TypeVar, Union, Callable, Any, cast
 from argparse import ArgumentParser, Action
 from itertools import product
 from multiprocessing import cpu_count
@@ -16,16 +16,21 @@ __all__ = ['ArgumentManager', 'HyperparamManager',
            'default_env_argument_manager']
 
 
-def _validate(arg: Argument, value):
+T = TypeVar('T')
+
+
+def _validate(arg: 'Argument[T]', value: 'Union[T, List[T]]'):
     if arg.validator is not None:
         if arg.multi:
             for one in value:
                 is_ok = arg.validator(one)
                 if not is_ok:
-                    raise ValueError(f'{one} did not pass the validator of {arg}')
+                    raise ValueError(
+                        f'{one} did not pass the validator of {arg}')
         else:
             if not arg.validator(value):
-                raise ValueError(f'{value} did not pass the validator of {arg}')
+                raise ValueError(
+                    f'{value} did not pass the validator of {arg}')
 
 
 class ArgumentManager():
@@ -38,8 +43,8 @@ class ArgumentManager():
     '''
 
     def __init__(self, title: str, description: str):
-        self._args = OrderedDict()
-        self._parsed_args = OrderedDict()
+        self._args: Dict[str, Argument] = OrderedDict()
+        self._parsed_args: Dict[str, Any] = OrderedDict()
         self._is_parsed = False
         self._add_arg_functions = {
             float: add_float_argument,
@@ -59,7 +64,7 @@ class ArgumentManager():
         self.title = title
         self.description = description
 
-    def _callback_action(self, tag: str) -> type:
+    def _callback_action(self, tag: str) -> Type[Action]:
         tags = ('true', 'false', 'other')
         if not tag in tags:
             raise ValueError(f'{tag} should be in {tags}')
@@ -128,13 +133,13 @@ class ArgumentManager():
         else:
             return self._parsed_args.items()
 
-    def __contains__(self, index):
+    def __contains__(self, index: str):
         if not self._is_parsed:
             return index in self._args
         else:
             return index in self._parsed_args
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: str):
         if not self._is_parsed:
             return self._args[index]
         else:
@@ -146,7 +151,7 @@ class ArgumentManager():
         else:
             return f'{self.title}({self._parsed_args})'
 
-    def __add__(self, other):
+    def __add__(self, other: Union['ArgumentManager', '_ArgumentManagerSum']) -> '_ArgumentManagerSum':
         o = _ArgumentManagerSum()
         o._sub_managers.append(self)
 
@@ -182,14 +187,14 @@ class ArgumentManager():
 
     def register(
             self,
-            pname_or_argument: Union[str, Argument],
+            pname_or_argument: 'Union[str, Argument[T]]',
             cli_aliases: Optional[List[str]] = None,
             *,
             multi: bool = False,
-            dtype: type = float,
-            validator: Optional = None,
+            dtype: 'Type[T]' = float,
+            validator: 'Optional[Callable[[T], bool]]' = None,
             helpstr: Optional[str] = None,
-            default: Optional[Any] = None) -> None:
+            default: 'Optional[T]' = None) -> None:
         if isinstance(pname_or_argument, Argument):
             pname = pname_or_argument.pname
             cli_aliases = pname_or_argument.cli_aliases
@@ -273,9 +278,9 @@ class HyperparamManager(ArgumentManager):
 
 class _ArgumentManagerSum():
     def __init__(self):
-        self._sub_managers = []
+        self._sub_managers: List[ArgumentManager] = []
 
-    def __add__(self, other):
+    def __add__(self, other: Union[ArgumentManager, '_ArgumentManagerSum']) -> '_ArgumentManagerSum':
         o = _ArgumentManagerSum()
         o._sub_managers = self._sub_managers
 
@@ -305,7 +310,7 @@ def default_loader_argument_manager(train_or_test: str, default_test_batch: int 
         raise ValueError(
             f'{train_or_test} is not supported. Choose one from {tags}')
 
-    manager = ArgumentManager('Dataloader Arguments', None)
+    manager = ArgumentManager('Dataloader Arguments', '')
     if train_or_test in ('train', 'both'):
         manager.register(
             'batch_size',
@@ -321,7 +326,7 @@ def default_loader_argument_manager(train_or_test: str, default_test_batch: int 
             dtype=int,
             validator=lambda x: cpu_count() >= x >= 0,
             helpstr='train loader batch woker',
-            default=8
+            default=min(8, cpu_count())
         )
 
     if train_or_test in ('test', 'both'):
@@ -339,14 +344,14 @@ def default_loader_argument_manager(train_or_test: str, default_test_batch: int 
             dtype=int,
             validator=lambda x: cpu_count() >= x >= 0,
             helpstr='test loader batch woker',
-            default=4
+            default=min(4, cpu_count())
         )
     return manager
 
 
 def default_env_argument_manager(
         train_or_test: str,
-        supported_datasets: Optional[List[str]] = None) -> ArgumentManager:
+        supported_datasets: List[str] = []) -> ArgumentManager:
     train_or_test = train_or_test.lower()
 
     tags = ('train', 'test', 'both')
@@ -357,12 +362,12 @@ def default_env_argument_manager(
     if train_or_test == 'both':
         train_or_test = 'train'
 
-    manager = ArgumentManager('Environment Arguments', None)
+    manager = ArgumentManager('Environment Arguments', '')
 
     if train_or_test == 'train':
-        if supported_datasets is None or len(supported_datasets) == 0:
+        if len(supported_datasets) == 0:
             raise ValueError('No supported datasets in train mode')
-        if len(supported_datasets) == 1:
+        elif len(supported_datasets) == 1:
             manager.register(
                 'dataset',
                 ['-DS', '--dataset'],
@@ -385,7 +390,7 @@ def default_env_argument_manager(
         ['-D', '--device'],
         dtype=int,
         multi=True,
-        validator=lambda x: torch.cuda.device_count() > x >= 0,
+        validator=lambda x: torch.cuda.device_count() > cast(int, x) >= 0,
         helpstr=f'Which GPU 0-{torch.cuda.device_count() - 1}',
         default=list(range(torch.cuda.device_count()))
     )

@@ -3,13 +3,16 @@
 
 __all__ = ['functional', 'manager', 'Argument']
 
-from collections import namedtuple
+from typing import Callable, Generic, NamedTuple, List, Optional, Type, TypeVar
 
-Argument = namedtuple('Argument', [
-    'pname',
-    'cli_aliases',
-    'multi',
-    'dtype',
-    'validator',
-    'helpstr',
-    'default'])
+T = TypeVar('T')
+
+
+class Argument(NamedTuple, Generic[T]):
+    pname: str
+    cli_aliases: List[str]
+    multi: bool
+    dtype: Type[T]
+    validator: Optional[Callable[[T], bool]]
+    helpstr: str
+    default: Optional[T]

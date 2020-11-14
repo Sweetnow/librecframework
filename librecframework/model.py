@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Tuple, Dict, Any, Optional
+from typing import Tuple, Dict, Any
 from abc import ABC, abstractmethod
 from collections import defaultdict
 import torch
 import torch.nn as nn
 from .data.dataset import DatasetBase
 from .loss import L2Loss
-from .trainhook import TrainHook
+from .trainhook import TrainHook, IgnoredHook
 
 # pylint: disable=W0221
 
@@ -16,42 +16,61 @@ __all__ = ['Model', 'EmbeddingBasedModel', 'DotBasedModel']
 
 
 class Model(nn.Module, ABC):
-    '''
-    abstract class for model which contains two pipelines
-    - train: forward -> calculate_loss
-    - test: before_evaluate -> evaluate
-    '''
+    """
+    Abstract class for model which contains two pipelines:
+    - train: `forward` -> `calculate_loss`
+    - test: `before_evaluate` -> `evaluate`
+    """
 
     @abstractmethod
-    def load_pretrain(self, pretrain_info: Dict[str, Any]):
+    def load_pretrain(self, pretrain_info: Dict[str, Any]) -> None:
+        """
+        Select and load pretrain model
+
+        Args:
+        - pretrain_info: the content loaded from `pretrain_path` and selected by dataset name
+        """
         return
 
     @abstractmethod
-    def forward(self, *args, **kwargs):
-        '''
-        input args should match dataset `__getitem__` return values
-        '''
+    def forward(self, *args, **kwargs) -> Any:
+        """
+        Forwarding propagation
+
+        Args:
+        - kwargs: the train dataset `__getitem__` return values
+        """
         return
 
     @abstractmethod
-    def calculate_loss(self, modelout: tuple, batch_size: int):
-        '''
-        `modelout` will be `forward` return values
-        '''
+    def calculate_loss(self, modelout: tuple, batch_size: int) -> torch.Tensor:
+        """
+        Calculate loss in forwarding propagation
+
+        Args:
+        - modelout: `forward` return value(s)
+        - batch_size: the batch size of the forwarding phase
+        """
         return
 
     @abstractmethod
-    def before_evaluate(self):
+    def before_evaluate(self) -> Any:
+        """Pre-generate data in evaluation"""
         return
 
     @abstractmethod
-    def evaluate(self, before, *args, **kwargs):
-        '''
-        `before` will be `before_evaluate` return values
-        '''
+    def evaluate(self, before, *args, **kwargs) -> torch.Tensor:
+        """
+        Evaluation
+
+        Args:
+        - before: the `before_evaluate` return value(s)
+        - kwargs: the test dataset `__getitem__` return values
+        """
         return
 
-    def register_trainhooks(self, trainhooks: Dict[str, TrainHook]):
+    def register_trainhooks(self, trainhooks: Dict[str, TrainHook]) -> None:
+        """Assign trainhooks into the model"""
         self._trainhooks = trainhooks
 
     @property
@@ -59,17 +78,30 @@ class Model(nn.Module, ABC):
         if self.training:
             return self._trainhooks
         else:
-            return defaultdict(lambda: lambda x: None)
+            return defaultdict(lambda: IgnoredHook())
 
 
 class EmbeddingBasedModel(Model):
+    """
+    Abstract class for embedding based model which added two features based on `Model`:
+    - Automatically create embeddings for two kinds of entities by `num_ps`, `num_qs` and `info.embedding_size`
+    - Add L2 loss function as `self._L2` with `info.L2` weight
+    """
     # pylint: disable=W0223
+
     def __init__(
             self,
             info,
             dataset: DatasetBase,
             create_embeddings: bool,
             hasL2: bool = True):
+        """
+        Args:
+        - info: the CLI input args
+        - dataset: the train dataset
+        - create_embeddings: whether to auto-create embeddings
+        - hasL2: whether to add L2 loss function
+        """
         super().__init__()
         self.info = info
         self.embedding_size = info.embedding_size
@@ -79,21 +111,25 @@ class EmbeddingBasedModel(Model):
         self.num_qs = dataset.num_qs
         if create_embeddings:
             # embeddings
-            self.ps_feature = nn.Parameter(
+            self.ps_feature: nn.Parameter = nn.Parameter(
                 torch.FloatTensor(self.num_ps, self.embedding_size))
             nn.init.xavier_normal_(self.ps_feature)
-            self.qs_feature = nn.Parameter(
+            self.qs_feature: nn.Parameter = nn.Parameter(
                 torch.FloatTensor(self.num_qs, self.embedding_size))
             nn.init.xavier_normal_(self.qs_feature)
 
 
 class DotBasedModel(EmbeddingBasedModel):
+    """
+    Abstract class for dot based model which added one feature based on `EmbeddingBasedModel`:
+    - Simplify `forward`, `before_evaluate` and `evaluate` interfaces to `propagate` interface, which aims to generate final embeddings
+    """
     @abstractmethod
     def propagate(self) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Generate embeddings for dot-based prediction"""
         return
 
     def forward(self, ps: torch.Tensor, qs: torch.Tensor):
-        # FIXME: by torch.matmul([B,?,D], [B,?,D].t())
         ps_feature, qs_feature = self.propagate()
         qs_embedding = qs_feature[qs]
         ps_embedding = ps_feature[ps].expand(
