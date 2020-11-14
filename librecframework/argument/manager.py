@@ -19,7 +19,7 @@ __all__ = ['ArgumentManager', 'HyperparamManager',
 T = TypeVar('T')
 
 
-def _validate(arg: Argument[T], value: Union[T, List[T]]):
+def _validate(arg: 'Argument[T]', value: 'Union[T, List[T]]'):
     if arg.validator is not None:
         if arg.multi:
             for one in value:
@@ -187,14 +187,14 @@ class ArgumentManager():
 
     def register(
             self,
-            pname_or_argument: Union[str, Argument[T]],
+            pname_or_argument: 'Union[str, Argument[T]]',
             cli_aliases: Optional[List[str]] = None,
             *,
             multi: bool = False,
-            dtype: Type[T] = float,
-            validator: Optional[Callable[[T], bool]] = None,
+            dtype: 'Type[T]' = float,
+            validator: 'Optional[Callable[[T], bool]]' = None,
             helpstr: Optional[str] = None,
-            default: Optional[T] = None) -> None:
+            default: 'Optional[T]' = None) -> None:
         if isinstance(pname_or_argument, Argument):
             pname = pname_or_argument.pname
             cli_aliases = pname_or_argument.cli_aliases

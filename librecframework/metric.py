@@ -3,7 +3,8 @@
 
 # pylint: disable=W0603,W0201
 
-from typing import Dict, Any
+from ast import Num
+from typing import Dict, Any, Union, cast
 from abc import ABC, abstractmethod
 import torch
 
@@ -11,6 +12,8 @@ __all__ = ['Precision', 'Recall', 'NDCG', 'MRR',
            'LeaveOneHR', 'LeaveOneNDCG', 'LeaveOneMRR', 'Metric']
 
 is_hit_cache: Dict[int, Dict[str, Any]] = {}
+
+Number = Union[int, float]
 
 
 def _get_is_hit(scores: torch.Tensor, ground_truth: torch.Tensor, topk: int) -> torch.Tensor:
@@ -36,29 +39,40 @@ def _get_is_hit(scores: torch.Tensor, ground_truth: torch.Tensor, topk: int) -> 
 
 
 class Metric(ABC):
-    '''
-    base class of metrics like HR@k NDCG@k
-    '''
+    """
+    Base class for metrics in evaluation stage
+
+    Property & Methods:
+    - metric: the meaning metric value
+    - start(): reset the metric
+    - stop(): close the metric after one epoch
+    - __call__(): send a value into the metric
+    """
 
     def __init__(self) -> None:
         self.start()
 
     @property
     def metric(self) -> float:
-        return self._metric
+        if self._stopped:
+            return self._metric
+        else:
+            raise RuntimeError(
+                f'{self} is not stopped. Call stop() before reading metric')
 
     @abstractmethod
     def __call__(self, scores: torch.Tensor, ground_truth: torch.Tensor) -> None:
-        '''
+        """
+        Args:
         - scores: model output
-        - ground_truth: one-hot test dataset shape=(ps, all_qs).
-        '''
+        - ground_truth: one-hot test dataset shape as `scores`.
+        """
         pass
 
     def start(self) -> None:
-        '''
-        clear all
-        '''
+        """Initialize the metric"""
+        self._stopped = False
+
         global is_hit_cache
         is_hit_cache = {}
         self._cnt: float = 0
@@ -66,12 +80,16 @@ class Metric(ABC):
         self._sum: float = 0
 
     def stop(self) -> None:
+        """Compute metric value to close the metric"""
         global is_hit_cache
         is_hit_cache = {}
         self._metric = self._sum / self._cnt
+        self._stopped = True
 
 
 class TopkMetric(Metric):
+    """Base class for top-K based metric"""
+
     def __init__(self, topk: int):
         super().__init__()
         self.topk = topk
@@ -82,17 +100,16 @@ class TopkMetric(Metric):
 
 
 class Precision(TopkMetric):
+    """Precision = TP / (TP + FP)"""
+
     def __call__(self, scores: torch.Tensor, ground_truth: torch.Tensor) -> None:
         is_hit = _get_is_hit(scores, ground_truth, self.topk)
-        is_hit = is_hit.mean(dim=1)
         self._cnt += scores.shape[0]
-        self._sum += is_hit.sum().item()
+        self._sum += cast(Number, is_hit.mean(dim=1).sum().item())
 
 
 class Recall(TopkMetric):
-    '''
-    Recall in top-k samples
-    '''
+    """Recall = TP / (TP + FN)"""
 
     def __call__(self, scores: torch.Tensor, ground_truth: torch.Tensor) -> None:
         is_hit = _get_is_hit(scores, ground_truth, self.topk)
@@ -100,28 +117,29 @@ class Recall(TopkMetric):
         num_pos = ground_truth.sum(dim=1)
         # ignore row without positive result
         self._cnt += scores.shape[0] - (num_pos == 0).sum().item()
-        self._sum += (is_hit / (num_pos + self.eps)).sum().item()
+        self._sum += cast(Number, (is_hit / (num_pos + self.eps)).sum().item())
 
 
 class NDCG(TopkMetric):
-    '''
-    NDCG in top-k samples
-    '''
+    """Normalized Discounted Cumulative Gain"""
 
     def DCG(self, hit: torch.Tensor, device: torch.device = torch.device('cpu')) -> torch.Tensor:
-        hit = hit / torch.log2(torch.arange(2, self.topk+2,
-                                            device=device, dtype=torch.float))
+        hit = hit / torch.log2(torch.arange(
+            2, self.topk+2, device=device, dtype=torch.float))
         return hit.sum(-1)
 
-    def IDCG(self, num_pos: int) -> torch.Tensor:
-        hit = torch.zeros(self.topk, dtype=torch.float)
-        hit[:num_pos] = 1
-        return self.DCG(hit)
+    def _IDCG(self, num_pos: int) -> Number:
+        if num_pos == 0:
+            return 1
+        else:
+            hit = torch.zeros(self.topk, dtype=torch.float)
+            hit[:num_pos] = 1
+            return self.DCG(hit).item()
 
     def __init__(self, topk: int) -> None:
         super().__init__(topk)
         self.IDCGs: torch.Tensor = torch.FloatTensor(
-            [1] + [self.IDCG(i) for i in range(1, self.topk + 1)])
+            [self._IDCG(i) for i in range(0, self.topk + 1)])
 
     def __call__(self, scores: torch.Tensor, ground_truth: torch.Tensor) -> None:
         device = scores.device
@@ -131,13 +149,11 @@ class NDCG(TopkMetric):
         idcg = self.IDCGs[num_pos]
         ndcg = dcg / idcg.to(device)
         self._cnt += scores.shape[0] - (num_pos == 0).sum().item()
-        self._sum += ndcg.sum().item()
+        self._sum += cast(Number, ndcg.sum().item())
 
 
 class MRR(TopkMetric):
-    '''
-    Mean reciprocal rank in top-k samples
-    '''
+    """Mean Reciprocal Rank = 1 / position(1st hit)"""
 
     def __init__(self, topk: int):
         super().__init__(topk)
@@ -151,29 +167,27 @@ class MRR(TopkMetric):
         first_hit_rr = is_hit.max(dim=1)[0]
         num_pos = ground_truth.sum(dim=1)
         self._cnt += scores.shape[0] - (num_pos == 0).sum().item()
-        self._sum += first_hit_rr.sum().item()
+        self._sum += cast(Number, first_hit_rr.sum().item())
 
 
 class LeaveOneHR(TopkMetric):
-    '''
-    Leave-one-out Hit Ratio in top-k samples
-    '''
+    """Leave-one-out Hit Ratio = 1 if hit else 0"""
 
     def __call__(self, scores: torch.Tensor, ground_truth: torch.Tensor) -> None:
         is_hit = _get_is_hit(scores, ground_truth, self.topk)
-        self._cnt += ground_truth.sum().item()
-        self._sum += is_hit.sum().item()
+        self._cnt += cast(int, ground_truth.sum().item())
+        self._sum += cast(Number, is_hit.sum().item())
 
 
 class LeaveOneNDCG(TopkMetric):
-    '''
-    Leave-one-out NDCG in top-k samples
-    NDCG = log(2) / log(1+hit_positions)
-    '''
+    """
+    Leave-one-out Normalized Discounted Cumulative Gain
+    NDCG = log(2) / log(1 + position(hit))
+    """
 
     def __init__(self, topk: int) -> None:
         super().__init__(topk)
-        self.NDCGs: torch.Tensor = 1 / \
+        self.NDCGs = 1 / \
             torch.log2(torch.arange(2, self.topk + 2,
                                     dtype=torch.float))
         self.NDCGs.unsqueeze_(0)
@@ -182,14 +196,12 @@ class LeaveOneNDCG(TopkMetric):
         device = scores.device
         is_hit = _get_is_hit(scores, ground_truth, self.topk)
         ndcg = is_hit * self.NDCGs.to(device)
-        self._cnt += ground_truth.sum().item()
-        self._sum += ndcg.sum().item()
+        self._cnt += cast(int, ground_truth.sum().item())
+        self._sum += cast(Number, ndcg.sum().item())
 
 
 class LeaveOneMRR(TopkMetric):
-    '''
-    Leave-one-out Mean reciprocal rank in top-k samples
-    '''
+    """Leave-one-out Mean Reciprocal Rank = 1 / position(hit)"""
 
     def __init__(self, topk: int):
         super().__init__(topk)
@@ -200,8 +212,8 @@ class LeaveOneMRR(TopkMetric):
         device = scores.device
         is_hit = _get_is_hit(scores, ground_truth, self.topk)
         mrr = is_hit / self.denominator.to(device)
-        self._cnt += ground_truth.sum().item()
-        self._sum += mrr.sum().item()
+        self._cnt += cast(int, ground_truth.sum().item())
+        self._sum += cast(Number, mrr.sum().item())
 
 
 _ALL_METRICS = {cls.__name__: cls for cls in (

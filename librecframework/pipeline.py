@@ -144,7 +144,7 @@ class _DefaultTrainPipeline(Pipeline):
         # dataset
         dataset_args = self._oargs['dataset']
         self.train_data = TrainDataset(
-            path=dataset_args['path'],
+            path=Path(dataset_args['path']),
             name=self._eam['dataset'],
             num_worker=self._eam['sample_worker'],
             max_epoch=self._eam['sample_epoch'],
@@ -154,7 +154,7 @@ class _DefaultTrainPipeline(Pipeline):
             use_backup=dataset_args['use_backup']
         )
         self.test_data = self._test_dataset_type(
-            path=dataset_args['path'],
+            path=Path(dataset_args['path']),
             name=self._eam['dataset'],
             task=self.task,
             train_dataset=self.train_data,
@@ -402,7 +402,7 @@ class _DefaultTestPipeline(Pipeline):
         # dataset
         dataset_args = self._oargs['dataset']
         self.train_data = TrainDataset(
-            path=dataset_args['path'],
+            path=Path(dataset_args['path']),
             name=self.dataset,
             num_worker=0,
             max_epoch=0,
@@ -412,7 +412,7 @@ class _DefaultTestPipeline(Pipeline):
             use_backup=False
         )
         self.test_data = self._test_dataset_type(
-            path=dataset_args['path'],
+            path=Path(dataset_args['path']),
             name=self.dataset,
             task=self.task,
             train_dataset=self.train_data,

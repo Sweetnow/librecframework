@@ -3,17 +3,19 @@
 
 __all__ = ['dataset', 'functional', 'DatasetFuncs', 'save_pyobj', 'load_pyobj']
 
-from collections import namedtuple
-from typing import Union, Any, cast, IO
+from typing import Union, Any, cast, IO, NamedTuple
 import pickle
 import gzip
 import logging
 from pathlib import Path
 
-DatasetFuncs = namedtuple(
-    'DatasetFuncs',
-    ('record', 'postinit', 'sample', 'getitem', 'length')
-)
+
+class DatasetFuncs(NamedTuple):
+    record: Any
+    postinit: Any
+    sample: Any
+    getitem: Any
+    length: Any
 
 
 def save_pyobj(path: Union[str, Path], obj: Any, compress_level=2) -> None:

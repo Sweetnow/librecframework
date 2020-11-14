@@ -5,7 +5,6 @@ from typing import Callable, List, Union, Any, Dict, Tuple
 import os
 import numpy as np
 import torch
-from . import save_pyobj, load_pyobj
 from .dataset import DatasetBase, TrainDataset, FullyRankingTestDataset, LeaveOneOutTestDataset
 
 __all__ = [
@@ -36,8 +35,8 @@ def modify_nothing(
 
 
 def reverse_iu(
-        records: List[Union[list, tuple]]) -> List[Union[list, tuple]]:
-    records = [(record[1], record[0], *record[2:]) for record in records]
+        records: List[List[int]]) -> List[List[int]]:
+    records = [[record[1], record[0], *record[2:]] for record in records]
     return records
 
 
@@ -61,7 +60,7 @@ class PostinitFuncSum():
             f(*args, **kwargs)
 
 
-def do_nothing(_) -> None:
+def do_nothing(_: Any) -> None:
     pass
 
 
@@ -73,57 +72,10 @@ class set_num_negtive_qs():
         dataset.num_neg_qs = self._num
 
 
-class KhopFriends():
-    def __init__(
-            self,
-            k: int,
-            tag: str,
-            has_subgraph: bool,
-            use_backup: bool = True):
-        self.k = k
-        self.tag = tag
-        self.has_subgraph = has_subgraph
-        self.use_backup = use_backup
-
-    def __call__(self, dataset: DatasetBase):
-        '''
-        Find k-hop subgraph in social graph for each user
-
-        In subgraphs[?], the FIRST of `ids` is central user and `ids` is `graph`'s indice.
-        '''
-        k_hop_file = dataset.path/dataset.name / \
-            f'{dataset.name}-{self.k}-hop-{self.tag}.pkl'
-        if self.use_backup and os.path.exists(k_hop_file):
-            dataset.subgraphs = load_pyobj(k_hop_file)
-        else:
-            subgraphs = {}
-            for start_u in range(dataset.num_users):
-                all_friends = {start_u}
-                last_hop = {start_u}
-                for _ in range(self.k):
-                    last_hop_next = set()
-                    for u in last_hop:
-                        last_hop_next.update(dataset.friend_dict[u])
-                    all_friends.update(last_hop_next)
-                    last_hop = last_hop_next
-                all_friends.remove(start_u)
-                all_friends = np.array(
-                    [start_u] + list(all_friends), dtype=np.long)
-                if self.has_subgraph:
-                    subgraphs[start_u] = {
-                        'ids': all_friends,
-                        'graph': dataset.social_graph[all_friends].tocsc()[:, all_friends]
-                    }
-                else:
-                    subgraphs[start_u] = {'ids': all_friends}
-            dataset.subgraphs = subgraphs
-            if self.use_backup:
-                save_pyobj(k_hop_file, dataset.subgraphs)
-
 # sample_funcs
 
 
-def itemrec_sample(dataset: TrainDataset, index: int):
+def itemrec_sample(dataset: TrainDataset, index: int) -> int:
     p, q_pos = dataset.pos_pairs[index]
     while True:
         i = np.random.randint(dataset.num_qs)

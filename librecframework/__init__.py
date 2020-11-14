@@ -2,5 +2,4 @@
 # -*- coding: utf-8 -*-
 
 __all__ = ['logger', 'loss', 'metric', 'model', 'pipeline',
-           'train', 'test', 'argument', 'data', 'utils', 'trainhook',
-           'analysis']
+           'train', 'test', 'argument', 'data', 'utils', 'trainhook', 'analysis']

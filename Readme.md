@@ -59,11 +59,9 @@ The submodule is to contain some commonly used loss functions in recommendation,
 
 ### metric.py
 
-
+The submodule is to provide a general way to save metrics in model evaluation and visualize them by `Visdom`. We provide `Precision` `Recall` `NDCG` `MRR` for fully-ranking and leave-one-out mode (in leave-one-out mode, `Precision` `Recall`->`HR`)
 
 ### model.py
-
-
 
 ### pipeline.py
 
@@ -75,7 +73,7 @@ The submodule is to evaluate model in fully-ranking or leave-one-out mode by `fu
 
 ### train.py
 
-FIXME: `trainhooks` should not be here
+The submodule is to train model.
 
 ### trainhook.py
 
@@ -158,3 +156,4 @@ The submodule is to provide a general way to save key values in model `forward` 
 - [ ] Add `DGL` module support
 - [ ] Convergence judgment based on linear fitting instead of early-stopping
 - [ ] Replace `Visdom` to `Tensorboard` for visualization of training
+- [ ] Avoid same-id error in metric and speed up by sorting top-k, providing context manager

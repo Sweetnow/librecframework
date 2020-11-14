@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 from .data.dataset import DatasetBase
 from .loss import L2Loss
-from .trainhook import TrainHook
+from .trainhook import TrainHook, IgnoredHook
 
 # pylint: disable=W0221
 
@@ -18,8 +18,8 @@ __all__ = ['Model', 'EmbeddingBasedModel', 'DotBasedModel']
 class Model(nn.Module, ABC):
     """
     Abstract class for model which contains two pipelines:
-    - train: forward -> calculate_loss
-    - test: before_evaluate -> evaluate
+    - train: `forward` -> `calculate_loss`
+    - test: `before_evaluate` -> `evaluate`
     """
 
     @abstractmethod
@@ -78,7 +78,7 @@ class Model(nn.Module, ABC):
         if self.training:
             return self._trainhooks
         else:
-            return defaultdict(lambda: lambda x: None)
+            return defaultdict(lambda: IgnoredHook())
 
 
 class EmbeddingBasedModel(Model):
@@ -126,6 +126,7 @@ class DotBasedModel(EmbeddingBasedModel):
     """
     @abstractmethod
     def propagate(self) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Generate embeddings for dot-based prediction"""
         return
 
     def forward(self, ps: torch.Tensor, qs: torch.Tensor):

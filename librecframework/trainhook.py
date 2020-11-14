@@ -14,8 +14,8 @@ class TrainHook(ABC):
     Property & Methods:
     - title: the name of trainhook
     - start(): reset the trainhook
-    - __call__(): send a value into the trainhook
     - stop(): close the trainhook after one epoch
+    - __call__(): send a value into the trainhook
     """
 
     def __init__(self, title: str) -> None:
@@ -60,6 +60,20 @@ class TrainHook(ABC):
         self._stop()
         self._stopped = True
 
+
+class IgnoredHook(TrainHook):
+    """Trainhook which ignore the input"""
+    def __init__(self) -> None:
+        super().__init__('#')
+
+    def __call__(self, value: Any) -> None:
+        pass
+
+    def _start(self) -> None:
+        pass
+
+    def _stop(self) -> None:
+        pass
 
 class ValueMeanHook(TrainHook):
     """
