@@ -43,7 +43,7 @@ MODEL = MF
 
 def hyperparameter() -> HyperparamManager:
     hpm = HyperparamManager('Hyperparameter Arguments',
-                            None, f'{MODEL.__name__}Info')
+                            '', f'{MODEL.__name__}Info')
     hpm.register(
         'embedding_size',
         ['-EB', '--embedding-size'],

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Union
+from typing import Union, cast
 import numpy as np
 import scipy.sparse as sp
 import torch
@@ -40,6 +40,7 @@ def complete_graph_from_pq(
         raise ValueError(f'Improper `normalize` {normalize}')
     if not dtype is None:
         graph = graph.astype(dtype, copy=False)
+    graph = cast(sp.coo_matrix, graph)
     if return_scipy:
         return graph
     else:

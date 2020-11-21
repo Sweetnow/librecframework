@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Callable, Union, Dict, Union
+from typing import Callable, Union, Dict, Union, Type
 from argparse import ArgumentParser, _ArgumentGroup
 import re
 from . import Argument
@@ -10,12 +10,12 @@ __all__ = ['add_float_argument', 'add_int_argument',
            'add_str_argument', 'add_bool_argument']
 
 
-def _add_argument_factory(dtype: type) -> Callable[
-        [Union[ArgumentParser, _ArgumentGroup], Argument, Union[type, str]], None]:
+def _add_argument_factory(dtype: Type) -> Callable[
+        [Union[ArgumentParser, _ArgumentGroup], Argument, Union[Type, str]], None]:
     def _add_argument(
             parser: Union[ArgumentParser, _ArgumentGroup],
             arg: Argument,
-            action: Union[type, str] = 'default') -> None:
+            action: Union[Type, str] = 'default') -> None:
         assert arg.dtype is dtype
         if action == 'default':
             kwargs = {
@@ -57,7 +57,7 @@ add_str_argument = _add_argument_factory(str)
 def add_bool_argument(
         parser: Union[ArgumentParser, _ArgumentGroup],
         arg: Argument,
-        actions: Union[Dict[str, type], str] = 'default') -> None:
+        actions: Union[Dict[str, Type], str] = 'default') -> None:
     assert arg.dtype is bool
 
     group = parser.add_mutually_exclusive_group()
@@ -76,6 +76,7 @@ def add_bool_argument(
             'action': 'store_false'
         }
     else:
+        assert(isinstance(actions, dict))
         true_kwargs = {
             'help': arg.helpstr,
             'dest': arg.pname,

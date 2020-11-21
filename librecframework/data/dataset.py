@@ -97,7 +97,7 @@ class DatasetBase(Dataset):
             (values, (indice[:, 0], indice[:, 1])), shape=(self.num_ps, self.num_qs)).tocsr()
         return records, pos_pairs, ground_truth
 
-    def _load_social_relation(self) -> Tuple[Dict[int, Set[int]], sp.csr_matrix]:
+    def _load_social_relation(self) -> Tuple[Optional[Dict[int, Set[int]]], Optional[sp.csr_matrix]]:
         """load social relation pairs from `social_relation.txt` as dict and graph"""
         try:
             with open(self.path / self.name / 'social_relation.txt', 'r') as f:
@@ -139,7 +139,7 @@ class TrainDataset(DatasetBase):
 
     def __init__(
             self,
-            path: Union[str, Path],
+            path: Path,
             name: str,
             num_worker: int,
             max_epoch: int,
@@ -223,7 +223,7 @@ class FullyRankingTestDataset(DatasetBase):
 
     def __init__(
             self,
-            path: Union[str, Path],
+            path: Path,
             name: str,
             task: str,
             train_dataset: DatasetBase,
@@ -246,7 +246,7 @@ def _leave_one_out_sampler(args):
 class LeaveOneOutTestDataset(DatasetBase):
     def __init__(
             self,
-            path: Union[str, Path],
+            path: Path,
             name: str,
             task: str,
             train_dataset: DatasetBase,

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from librecframework import data
 from typing import Tuple, Dict, Any
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -21,6 +22,13 @@ class Model(nn.Module, ABC):
     - train: `forward` -> `calculate_loss`
     - test: `before_evaluate` -> `evaluate`
     """
+
+    def __init__(self,
+                 info,
+                 dataset: DatasetBase):
+        super().__init__()
+        self.info = info
+        self.dataset = dataset
 
     @abstractmethod
     def load_pretrain(self, pretrain_info: Dict[str, Any]) -> None:
@@ -102,13 +110,12 @@ class EmbeddingBasedModel(Model):
         - create_embeddings: whether to auto-create embeddings
         - hasL2: whether to add L2 loss function
         """
-        super().__init__()
-        self.info = info
+        super().__init__(info, dataset)
         self.embedding_size = info.embedding_size
         if hasL2:
             self._L2 = L2Loss(info.L2)
-        self.num_ps = dataset.num_ps
-        self.num_qs = dataset.num_qs
+        self.num_ps = self.dataset.num_ps
+        self.num_qs = self.dataset.num_qs
         if create_embeddings:
             # embeddings
             self.ps_feature: nn.Parameter = nn.Parameter(
@@ -138,12 +145,20 @@ class DotBasedModel(EmbeddingBasedModel):
         return pred, (ps_embedding, qs_embedding)
 
     def before_evaluate(self) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Pre-generate data in evaluation"""
         return self.propagate()
 
     def evaluate(
             self,
             before: Tuple[torch.Tensor, torch.Tensor],
             ps: torch.Tensor) -> torch.Tensor:
+        """
+        Evaluation (for fully-ranking evaluation)
+
+        Args:
+        - before: the `before_evaluate` return value(s)
+        - ps: the list of ps for evaluation
+        """
         ps_feature, qs_feature = before
         ps_feature = ps_feature[ps]
         scores = torch.mm(ps_feature, qs_feature.t())

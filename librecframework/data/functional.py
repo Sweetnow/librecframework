@@ -103,7 +103,7 @@ def default_train_getitem(self: TrainDataset, index: int) -> Dict[str, torch.Ten
 
 
 def default_fully_ranking_test_getitem(self: FullyRankingTestDataset, index: int) -> Tuple[
-        Dict[str, torch.Tensor], Dict[str, torch.Tensor]]:
+        Dict[str, int], Dict[str, torch.Tensor]]:
     ground_truth = torch.from_numpy(
         self.ground_truth[index].toarray()).view(-1)
     train_mask = torch.from_numpy(self.train_mask[index].toarray()).view(-1)
@@ -112,7 +112,7 @@ def default_fully_ranking_test_getitem(self: FullyRankingTestDataset, index: int
 
 
 def default_leave_one_out_test_getitem(self: LeaveOneOutTestDataset, index: int) -> Tuple[
-        Dict[str, torch.Tensor], Dict[str, torch.Tensor]]:
+        Dict[str, torch.Tensor], Dict[str, Union[torch.Tensor, int]]]:
     p, q_pos = self.pos_pairs[index]
     qs_neg = self.neg_qs[index]
     gt = torch.zeros(len(qs_neg)+1, dtype=torch.float)
