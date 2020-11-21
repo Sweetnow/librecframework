@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Union, Tuple, Dict
+from typing import List, Union, Tuple, Dict
 import os
 import json
 import re
@@ -20,10 +20,12 @@ __all__ = ['name_to_metric', 'name_to_activation',
 
 
 def name_to_metric(name: str, topk: int) -> Metric:
+    """Create `Metric` by `name` and `topk`"""
     return _ALL_METRICS[name](topk)
 
 
 def name_to_activation(name: str) -> nn.Module:
+    """Convert `name` to activation function using default hyperparameters"""
     name = name.lower()
     tables = {
         'relu': nn.ReLU,
@@ -40,11 +42,12 @@ def name_to_activation(name: str) -> nn.Module:
             f'Improper activation function name {name}. Existing activations are {tables.keys()}')
 
 
-def _path_to_saved_thing(path: Path, suffix: str) -> Tuple[list, str]:
+def _path_to_saved_thing(path: Path, suffix: str) -> Tuple[List[Dict], str]:
+    """
+    Get infos and saved model (.pth)
+    or log paths (.json) by related file `path`
+    """
     # pylint: disable=R1705
-    '''
-    get infos and saved model or log paths by related file path
-    '''
     if not os.path.exists(path):
         raise FileNotFoundError(f'{path} is not found')
     path = path.resolve()
@@ -110,11 +113,33 @@ def _path_to_saved_thing(path: Path, suffix: str) -> Tuple[list, str]:
         return metadatas, dataset_name
 
 
-def path_to_saved_model(path: Path) -> Tuple[list, str]:
+def path_to_saved_model(path: Path) -> Tuple[List[Dict], str]:
+    """
+    Get infos and saved model by related file `path`
+
+    Args:
+    - path: the related file path which supports `/path/to/log/.../date-time-id/`,
+    `/path/to/log/.../date-time-id/model.json`, `/path/to/log/.../date-time-id/saved_model.json` and `/path/to/log/.../date-time-id/saved_model.pth`.
+
+    Returns:
+    - $0: the metadatas of related saved models. If `path` is dir or `model.json`, the return value will contain all models in the dir. Otherwise, it will only contain information of the target saved model.
+    - $1: the name of dataset used for training the model
+    """
     return _path_to_saved_thing(path, 'pth')
 
 
-def path_to_saved_log(path: Path) -> Tuple[list, str]:
+def path_to_saved_log(path: Path) -> Tuple[List[Dict], str]:
+    """
+    Get log paths by related file `path`
+
+    Args:
+    - path: the related file path which supports `/ path/to/log/.../date-time-id /`,
+    `/path/to/log/.../date-time-id/model.json`, `/ path/to/log/.../date-time-id/saved_model.json` and `/path/to/log/.../date-time-id/saved_model.pth`.
+
+    Returns:
+    - $0: the metadatas of related saved models. If `path` is dir or `model.json`, the return value will contain all models in the dir. Otherwise, it will only contain information of the target saved model.
+    - $1: the name of dataset used for training the model
+    """
     return _path_to_saved_thing(path, 'json')
 
 
@@ -122,6 +147,7 @@ def scisp_to_torch(m: Union[sp.bsr_matrix, sp.coo_matrix,
                             sp.csc_matrix, sp.csr_matrix,
                             sp.dok_matrix, sp.dia_matrix,
                             sp.lil_matrix]) -> torch.Tensor:
+    """convert scipy sparse matrix to torch sparse matrix quickly"""
     m = m.tocoo()
     t = torch.sparse_coo_tensor(
         torch.from_numpy(np.vstack((m.row, m.col))).long(),
@@ -131,6 +157,7 @@ def scisp_to_torch(m: Union[sp.bsr_matrix, sp.coo_matrix,
 
 
 def torch_to_scisp(t: torch.Tensor) -> sp.coo_matrix:
+    """convert torch sparse matrix to scipy sparse matrix (COO) quickly"""
     if t.is_sparse:
         indice = t._indices().numpy()
         values = t._values().numpy()
@@ -142,6 +169,7 @@ def torch_to_scisp(t: torch.Tensor) -> sp.coo_matrix:
 
 
 def split_log_path(path: Path) -> Dict[str, str]:
+    """convert log path into `model`, `tag` and `type`"""
     pathstr = str(path.resolve(strict=False))
     dirs = pathstr.split(os.sep)
     dirs.reverse()

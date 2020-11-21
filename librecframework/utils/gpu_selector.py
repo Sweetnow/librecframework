@@ -16,6 +16,14 @@ INTERVAL = 0.1
 
 if sys.platform.startswith('linux'):
     def autoselect(gpu_target: List[int], min_memory: float) -> int:
+        """
+        Select which GPU to use
+        by the GPU memory requirement of model and the current usage
+
+        Args:
+        - gpu_target: the ID of candidate
+        - min_memory: the GPU memory requirement (GB)
+        """
         logging.info(f'GPU search space: {gpu_target}')
         nvmlInit()
         deviceCount = nvmlDeviceGetCount()

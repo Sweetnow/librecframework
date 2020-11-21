@@ -28,7 +28,7 @@ pip install . --user
 
 The submodule is to automatically analyse the dataset or the model results for paper presentation. Now the submodule only supports:
 
-- `multimodel.py`: organize models' metrics and report them as a csv table
+- `multimodel.py`: organize models' metrics and report them as a csv table.
 
 ### argument
 
@@ -40,13 +40,19 @@ The submodule is to automatically analyse the dataset or the model results for p
 
 ### utils
 
+The submodule is to contain utility for the library:
 
+- `convert.py`: convert one kind of objects to  another, like `[name, topk]->Metric` `path->save_model` `scipy.sparse->torch` and so on.
+- `gpu_selector.py`: select which GPU to use by the GPU memory requirement of model and the current usage.
+- `graph_generation.py`: generate adjacency matrix of both `p` and `q` from p-p adjacency matrix, q-q adjacency matrix and p-q adjacency matrix.
+- `training.py`: utility for training, like early-stopping.
+- `visshow.py`: a simple wrap for `Visdom`.
 
 ### logger.py
 
 The submodule is to easily record the hyperparameters setting, the environment setting (like optimizer) and all related values of each model into specific path.
 
-- `Logger`: the class to implement the function above
+- `Logger`: the class to implement the function above.
 
 ### loss.py
 
@@ -152,9 +158,8 @@ The submodule is to provide a general way to save key values in model `forward` 
 - [ ] Automatic analysis
   - [ ] Performance evaluation for data sparsity issue
   - [ ] Dataset profile
-- [ ] Pass static check by complete type hints
+- [x] Pass static check by complete type hints
 - [ ] Support more activation functions
-- [ ] Add `DGL` module support
 - [ ] Convergence judgment based on linear fitting instead of early-stopping
 - [ ] Replace `Visdom` to `Tensorboard` for visualization of training
 - [ ] Avoid same-id error in metric and speed up by sorting top-k, providing context manager

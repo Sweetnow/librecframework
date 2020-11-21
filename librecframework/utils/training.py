@@ -11,6 +11,11 @@ def metrics_sliding_max(
         metrics_log: Dict[str, List[float]],
         window_size: int,
         target: str) -> Dict[str, float]:
+    """
+    Calculate sliding max of metrics in `metrics_log` using window size `window_size`.
+
+    The window position of output is the position of `target` metric max.
+    """
     # max
     maxs: Dict[str, float] = {title: 0 for title in metrics_log.keys()}
     length = len(metrics_log[target])
@@ -32,6 +37,10 @@ def check_overfitting(
         metrics_log: Dict[str, List[float]],
         target: str,
         threshold: float) -> bool:
+    """
+    Check whether the difference between the latest `target` metric
+    in `metrics_log` and the best exceeds the `threshold`
+    """
     maxs = metrics_sliding_max(metrics_log, 1, target)
     assert target in maxs
     overfit = (maxs[target] - metrics_log[target][-1]) > threshold
@@ -42,6 +51,11 @@ def early_stop(
         metric_log: List[float],
         early: int,
         threshold: float = 0) -> int:
+    """
+    Decrease `early` if the lastest metric is less than the previous one.
+
+    Skip checking if the lastest metric is less than `threshold`.
+    """
     if len(metric_log) >= 2 and metric_log[-1] < metric_log[-2] and metric_log[-1] > threshold:
         return early - 1
     else:

@@ -11,7 +11,7 @@ __all__ = ['VisShow', 'replay']
 
 
 class VisShow(object):
-    '''
+    """
     Quick utility that wraps Visdom by `name`.
 
     Provide low-level interface `get_window` and `set_window`
@@ -21,13 +21,21 @@ class VisShow(object):
     `update`: append data to an existed window or create a new window with data
 
     `xlabel` `ylabel`: change the xlabel/ylabel of an existed window
-    '''
+    """
 
     def __init__(self, server: str, port: int, envdir: str, subenv: str) -> None:
+        """
+        Args:
+        - server: server IP
+        - port: server port
+        - envdir: primary path in Visdom
+        - subenv: secondary path in Visdom
+        """
         self.vis = Visdom(server, port=port,
                           env=f'{envdir}_{subenv}', raise_exceptions=False)
 
     def get_window(self, target: str) -> Optional[str]:
+        """[Low-level interface] Get window `target` ID"""
         attrname = f'__{target}'
         if hasattr(self, attrname):
             return getattr(self, attrname)
@@ -35,6 +43,7 @@ class VisShow(object):
             return None
 
     def set_window(self, name: str, win: str) -> None:
+        """[Low-level interface] Bind window `win` and `target`"""
         attrname = f'__{name}'
         if hasattr(self, attrname):
             raise ValueError(f'{name} has existed')
@@ -42,6 +51,7 @@ class VisShow(object):
             setattr(self, attrname, win)
 
     def update(self, target: str, X: List[Union[int, float]], Y: List[Union[int, float]]) -> None:
+        """Append `X` and `Y` of `target`"""
         win = self.get_window(target)
         if not win is None:
             self.vis.line(Y, X, win=win, update='append')
@@ -50,6 +60,7 @@ class VisShow(object):
                 Y, X, opts={'title': target}))
 
     def xlabel(self, target: str, label: str) -> None:
+        """Set xlabel of `target` to `label`"""
         win = self.get_window(target)
         if not win is None:
             self.vis.update_window_opts(win, {'xlabel': label})
@@ -57,6 +68,7 @@ class VisShow(object):
             raise ValueError(f'{target} has not existed')
 
     def ylabel(self, target: str, label: str) -> None:
+        """Set ylabel of `target` to `label`"""
         win = self.get_window(target)
         if not win is None:
             self.vis.update_window_opts(win, {'ylabel': label})
@@ -65,6 +77,7 @@ class VisShow(object):
 
 
 def replay(path: Path, config_path: Path):
+    """Replay logs in `path` to Visdom according to `config_path`"""
     with open(config_path, 'r') as f:
         config = json.load(f)
     server = config['visdom']['server']
