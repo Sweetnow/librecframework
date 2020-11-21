@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import sys
 from typing import List
 import logging
 import time
 import numpy as np
-from pynvml import *
+from pynvml import nvmlDeviceGetCount, nvmlInit, nvmlDeviceGetHandleByIndex, \
+    nvmlDeviceGetMemoryInfo, nvmlDeviceGetUtilizationRates, nvmlShutdown
 
 __all__ = ['autoselect']
 
@@ -26,8 +28,10 @@ if sys.platform.startswith('linux'):
                     rates[i, c] = 100
                 else:
                     handle = nvmlDeviceGetHandleByIndex(i)
-                    memories[i, c] = nvmlDeviceGetMemoryInfo(handle).free / 1024**3
-                    rates[i, c] = int(nvmlDeviceGetUtilizationRates(handle).gpu)
+                    memories[i, c] = nvmlDeviceGetMemoryInfo(
+                        handle).free / 1024**3
+                    rates[i, c] = int(
+                        nvmlDeviceGetUtilizationRates(handle).gpu)
             time.sleep(INTERVAL)
         nvmlShutdown()
         memories = memories.mean(1)
@@ -51,4 +55,4 @@ else:
 
 
 if __name__ == "__main__":
-    print(autoselect([0, 1, 2, 3, 4, 5, 6, 7], 2))
+    print(autoselect([0, 1, 2, 3, 4, 5, 6, 7], 0))

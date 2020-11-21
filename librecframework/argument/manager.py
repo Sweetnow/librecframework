@@ -3,11 +3,11 @@
 
 import os
 from collections import namedtuple, OrderedDict
-from typing import List, Dict, Optional, Type, TypeVar, Union, Callable, Any, cast
-from argparse import ArgumentParser, Action
+from typing import List, Dict, Optional, Sequence, Text, Type, TypeVar, Union, Callable, Any, cast
+from argparse import ArgumentParser, Action, _ArgumentGroup
 from itertools import product
 from multiprocessing import cpu_count
-import torch
+from torch.cuda import device_count
 from .functional import add_bool_argument, add_int_argument, add_str_argument, add_float_argument
 from . import Argument
 
@@ -45,8 +45,9 @@ class ArgumentManager():
     def __init__(self, title: str, description: str):
         self._args: Dict[str, Argument] = OrderedDict()
         self._parsed_args: Dict[str, Any] = OrderedDict()
-        self._is_parsed = False
-        self._add_arg_functions = {
+        self._is_parsed: bool = False
+        self._add_arg_functions: Dict[Type, Callable[
+            [Union[ArgumentParser, _ArgumentGroup], Argument, Union[Type, str]], None]] = {
             float: add_float_argument,
             int: add_int_argument,
             str: add_str_argument,
@@ -73,8 +74,8 @@ class ArgumentManager():
             # pylint: disable=W0622
             def __init__(
                     self,
-                    option_strings,
-                    dest,
+                    option_strings: Sequence[Text],
+                    dest: Text,
                     nargs=None,
                     const=None,
                     default=None,
@@ -384,15 +385,14 @@ def default_env_argument_manager(
                 dtype=str,
                 helpstr=f'Which dataset {supported_datasets}'
             )
-
     manager.register(
         'device',
         ['-D', '--device'],
         dtype=int,
         multi=True,
-        validator=lambda x: torch.cuda.device_count() > cast(int, x) >= 0,
-        helpstr=f'Which GPU 0-{torch.cuda.device_count() - 1}',
-        default=list(range(torch.cuda.device_count()))
+        validator=lambda x: device_count() > cast(int, x) >= 0,
+        helpstr=f'Which GPU 0-{device_count() - 1}',
+        default=list(range(device_count()))
     )
     manager.register(
         'tag',

@@ -1,7 +1,4 @@
 # Library of Recommender System based on PyTorch
-![Python package](https://github.com/Sweetnow/librecframework/workflows/Python%20package/badge.svg)
----
-
 ## Introduction
 
 A Python package to integrate the pipeline of recommender systems for simple model designing and fast idea verification.
@@ -24,8 +21,6 @@ pip install . --user
 1. Separate model design from other dirty things like CLI, logging, GPU selection, etc.
 2. Provide two general methods to save and visualize key values in the pipeline, `TrainHook` and `Metric`.
 3. Provide widely used loss functions and model design patterns in recommendation, supporting customization easily.
-
-
 
 ## Submodules
 
@@ -62,6 +57,12 @@ The submodule is to contain some commonly used loss functions in recommendation,
 The submodule is to provide a general way to save metrics in model evaluation and visualize them by `Visdom`. We provide `Precision` `Recall` `NDCG` `MRR` for fully-ranking and leave-one-out mode (in leave-one-out mode, `Precision` `Recall`->`HR`)
 
 ### model.py
+
+The submodule is to provide some base class for models.
+
+- `Model`: the abstract class for all models in our framework
+- `EmbeddingBasedModel`: the abstract class for embedding based models, which provide embedding generation
+- `DotBasedModel`: the abstract class for dot based models, which simplify `forward`, `before_evaluation` and `evaluation` and provide `propagate` interface
 
 ### pipeline.py
 

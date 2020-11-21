@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Union, List, Dict, Any, Optional, Type
+from typing import Callable, Union, List, Dict, Any, Optional, Type, cast
 from pathlib import Path
 from abc import ABC, abstractmethod
 import json
@@ -11,7 +11,8 @@ import setproctitle
 import torch
 from torch.utils.data import DataLoader
 from torch.optim import Adam
-from .argument.manager import HyperparamManager, \
+from torch import cuda
+from .argument.manager import ArgumentManager, HyperparamManager, \
     default_loader_argument_manager, default_env_argument_manager
 from .data import DatasetFuncs
 from .data.dataset import TrainDataset, FullyRankingTestDataset, LeaveOneOutTestDataset
@@ -77,31 +78,33 @@ class _DefaultTrainPipeline(Pipeline):
             min_memory: float,
             test_batch_size: int,
             # ==== partial parameters ====
-            test_dataset_type: type,
-            test_function):
+            test_dataset_type: Union[Type[FullyRankingTestDataset], Type[LeaveOneOutTestDataset]],
+            test_function: Callable[[Model, DataLoader, List[Metric]], None]):
         self._datasets = supported_datasets
         self._train_funcs = train_funcs
         self._test_funcs = test_funcs
         self._eam = default_env_argument_manager('both', self._datasets)
         self._lam = default_loader_argument_manager('both', test_batch_size)
         self._hpm = hyperparam_manager
-        self._other_arg_path = other_arg_path
-        self._pretrain_path = pretrain_path
-        self._args, self._oargs, self._pretrain = None, None, None
+        self._other_arg_path = Path(other_arg_path)
+        self._pretrain_path = Path(pretrain_path)
+        self._oargs, self._pretrain = None, None
         self._sample_tag = sample_tag
 
         self.description = description
         self.task = 'tune'
-        self.metrics = None
-        self.target_metric = None
-        self.train_data, self.test_data = None, None
-        self.train_loader, self.test_loader = None, None
-        self.log = None
+        self.metrics: List[Metric]
+        self.target_metric: Metric
+        self.train_data: TrainDataset
+        self.test_data: Union[FullyRankingTestDataset, LeaveOneOutTestDataset]
+        self.train_loader: DataLoader
+        self.test_loader: DataLoader
+        self.log: Logger
         self.pin_memory = pin_memory
         self.min_memory = min_memory
 
         self.infos = None
-        self.model_class = None
+        self.model_class: Type[Model]
 
         self._test_dataset_type = test_dataset_type
         self._test = test_function
@@ -114,6 +117,11 @@ class _DefaultTrainPipeline(Pipeline):
         return f'{self.__class__.__name__}({self.description})'
 
     def add_args(self, parser: ArgumentParser):
+        # typing
+        self._eam = cast(ArgumentManager, self._eam)
+        self._lam = cast(ArgumentManager, self._lam)
+        self._hpm = cast(ArgumentManager, self._hpm)
+
         (self._eam + self._lam + self._hpm).add_args(parser)
 
     def parse_args(self, args: Optional[List[str]] = None, namespace: Optional[Namespace] = None):
@@ -122,6 +130,11 @@ class _DefaultTrainPipeline(Pipeline):
         parser.parse_args(args, namespace)
 
     def before_running(self):
+        # typing
+        self._eam = cast(Dict[str, Any], self._eam)
+        self._lam = cast(Dict[str, Any], self._lam)
+        self._hpm = cast(Dict[str, Any], self._hpm)
+
         # get args
         logging.basicConfig(level=logging.DEBUG)
         logging.info(self._eam)
@@ -175,7 +188,7 @@ class _DefaultTrainPipeline(Pipeline):
             pin_memory=self.pin_memory
         )
 
-        self.infos = self._hpm.to_infos()
+        self.infos = cast(HyperparamManager, self._hpm).to_infos()
 
     def during_running(
             self,
@@ -186,10 +199,14 @@ class _DefaultTrainPipeline(Pipeline):
         '''
         `other_args` will be sended to `model.__init__` as key-value args
         '''
+        # typing
+        self._eam = cast(Dict[str, Any], self._eam)
+        self._lam = cast(Dict[str, Any], self._lam)
+        self._hpm = cast(Dict[str, Any], self._hpm)
+
         if trainhooks is None:
-            trainhooks = self.trainhooks
-        else:
-            trainhooks.update(self.trainhooks)
+            trainhooks = {}
+        trainhooks.update(self.trainhooks)
 
         self.model_class = model_class
         modelname = self.model_class.__name__
@@ -201,7 +218,7 @@ class _DefaultTrainPipeline(Pipeline):
         self.log = Logger(logpath, logger_args['policy'])
         pretrain = 'pretrain' in self._hpm and self._hpm['pretrain']
         gpu_id = autoselect(self._eam['device'], self.min_memory)
-        with torch.cuda.device(gpu_id):
+        with cuda.device(gpu_id):
             for info in self.infos:
                 envdir = modelname
                 sub_env = f"{self._eam['tag']}-{'-'.join(map(str,info._asdict().values()))}-{pretrain}"
@@ -237,7 +254,7 @@ class _DefaultTrainPipeline(Pipeline):
                 with self.log.update_modelinfo(modelname, info, env, target) as log:
                     # train
                     early = train_args['early_stop']
-                    self.train_loader.dataset.init_epoch()
+                    cast(TrainDataset, self.train_loader.dataset).init_epoch()
                     for epoch in range(self._eam['epoch']):
                         train(model, epoch + 1, self.train_loader, op, trainhooks)
                         for v in trainhooks.values():
@@ -342,8 +359,8 @@ class _DefaultTestPipeline(Pipeline):
             min_memory: float,
             test_batch_size: int,
             # ==== partial parameters ====
-            test_dataset_type: type,
-            test_function
+            test_dataset_type: Union[Type[FullyRankingTestDataset], Type[LeaveOneOutTestDataset]],
+            test_function: Callable[[Model, DataLoader, List[Metric]], None]
     ):
         self._train_funcs = train_funcs
         self._test_funcs = test_funcs
@@ -351,18 +368,19 @@ class _DefaultTestPipeline(Pipeline):
         self._lam = default_loader_argument_manager('test', test_batch_size)
         self._other_arg_path = other_arg_path
 
-        self._args, self._oargs, self._pretrain = None, None, None
+        self._oargs, self._pretrain = None, None
 
         self.description = description
         self.task = 'test'
-        self.metrics = None
-        self.target_metric = None
-        self.dataset = None
-        self.train_data = None
-        self.test_data, self.test_loader = None, None
-        self.log = None
+        self.metrics: List[Metric]
+        self.target_metric: Metric
+        self.dataset: str
+        self.train_data: TrainDataset
+        self.test_data: Union[FullyRankingTestDataset, LeaveOneOutTestDataset]
+        self.test_loader: DataLoader
+        self.log: Logger
         self.infos = None
-        self.model_class = None
+        self.model_class: Type[Model]
         self.pin_memory = pin_memory
         self.min_memory = min_memory
 
@@ -373,6 +391,9 @@ class _DefaultTestPipeline(Pipeline):
         return f'{self.__class__.__name__}({self.description})'
 
     def add_args(self, parser: ArgumentParser):
+        # typing
+        self._eam = cast(ArgumentManager, self._eam)
+        self._lam = cast(ArgumentManager, self._lam)
         (self._eam + self._lam).add_args(parser)
 
     def parse_args(self, args: Optional[List[str]] = None, namespace: Optional[Namespace] = None):
@@ -381,6 +402,10 @@ class _DefaultTestPipeline(Pipeline):
         parser.parse_args(args, namespace)
 
     def before_running(self):
+        # typing
+        self._eam = cast(Dict[str, Any], self._eam)
+        self._lam = cast(Dict[str, Any], self._lam)
+
         # get args
         logging.basicConfig(level=logging.DEBUG)
         logging.info(self._eam)
@@ -407,7 +432,7 @@ class _DefaultTestPipeline(Pipeline):
             num_worker=0,
             max_epoch=0,
             funcs=self._train_funcs,
-            sample_tag=None,
+            sample_tag='',
             seed=None,
             use_backup=False
         )
@@ -427,6 +452,10 @@ class _DefaultTestPipeline(Pipeline):
         )
 
     def during_running(self, model_class: Type[Model], other_args: Dict[str, Any]):
+        # typing
+        self._eam = cast(Dict[str, Any], self._eam)
+        self._lam = cast(Dict[str, Any], self._lam)
+
         self.model_class = model_class
         modelname = self.model_class.__name__
         target = str(self.target_metric)
@@ -434,11 +463,9 @@ class _DefaultTestPipeline(Pipeline):
         logger_args = self._oargs['logger']
         logpath = Path(logger_args['path']) / modelname / \
             f"{self.dataset}_{self.task}"/self._eam['tag']
-        self.log = Logger(
-            logpath, logger_args['policy'],
-            checkpoint_target=target)
+        self.log = Logger(logpath, logger_args['policy'])
         gpu_id = autoselect(self._eam['device'], self.min_memory)
-        with torch.cuda.device(gpu_id):
+        with cuda.device(gpu_id):
             for metadata in self.infos:
                 eval_str = f"Eval: {modelname}_{metadata['id']}"
                 setproctitle.setproctitle(
@@ -575,14 +602,14 @@ class _DefaultPipeline(Pipeline):
         self._test_pipeline.add_args(test_parser)
         test_parser.set_defaults(which='test')
 
-    def parse_args(self, args: Optional[List[str]] = None, namespace: Optional[Namespace] = None):
+    def parse_args(self, args: Optional[List[str]] = None):
         parser = ArgumentParser(description=self.description)
         self.add_args(parser)
-        args = parser.parse_args(args, namespace)
+        parsed_args = parser.parse_args(args)
         try:
-            self.which = args.which
+            self.which = parsed_args.which
         except AttributeError:
-            args = parser.parse_args(['-h'])
+            parsed_args = parser.parse_args(['-h'])
 
     def before_running(self):
         if self.which == 'train':

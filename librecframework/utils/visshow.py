@@ -24,7 +24,8 @@ class VisShow(object):
     '''
 
     def __init__(self, server: str, port: int, envdir: str, subenv: str) -> None:
-        self.vis = Visdom(server, port=port, env=f'{envdir}_{subenv}')
+        self.vis = Visdom(server, port=port,
+                          env=f'{envdir}_{subenv}', raise_exceptions=False)
 
     def get_window(self, target: str) -> Optional[str]:
         attrname = f'__{target}'
@@ -63,7 +64,7 @@ class VisShow(object):
             raise ValueError(f'{target} has not existed')
 
 
-def replay(path: Union[str, Path], config_path: Union[str, Path]):
+def replay(path: Path, config_path: Path):
     with open(config_path, 'r') as f:
         config = json.load(f)
     server = config['visdom']['server']
