@@ -10,7 +10,7 @@ pip install . --user
 ```
 
 ### Requirement
-
+0. `Python` >= 3.8
 1. `PyTorch` >= 1.2.0
 2. `visdom` == 0.1.8.9 (for visualization)
 3. `nvidia_ml_py3` == 7.352.0 (for auto-selection of GPU)
