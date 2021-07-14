@@ -6,7 +6,7 @@ A Python package to integrate the pipeline of recommender systems for simple mod
 ### Installation
 
 ```bash
-pip install . --user
+bash install.sh
 ```
 
 ### Requirement

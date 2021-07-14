@@ -3,16 +3,14 @@
 
 __all__ = ['functional', 'manager', 'Argument']
 
-from typing import Callable, Generic, NamedTuple, List, Optional, Type, TypeVar
-
-T = TypeVar('T')
+from typing import Any, Callable, NamedTuple, List, Optional, Type
 
 
-class Argument(NamedTuple, Generic[T]):
+class Argument(NamedTuple):
     pname: str
     cli_aliases: List[str]
     multi: bool
-    dtype: Type[T]
-    validator: Optional[Callable[[T], bool]]
+    dtype: Type
+    validator: Optional[Callable[[Any], bool]]   # Any = dtype
     helpstr: str
-    default: Optional[T]
+    default: Optional[Any]  # Any = dtype

@@ -19,8 +19,8 @@ if sys.platform.startswith('linux'):
         logging.info(f'GPU search space: {gpu_target}')
         nvmlInit()
         deviceCount = nvmlDeviceGetCount()
-        memories = np.zeros((deviceCount, COUNT), dtype=np.float)
-        rates = np.zeros((deviceCount, COUNT), dtype=np.float)
+        memories = np.zeros((deviceCount, COUNT), dtype=np.float32)
+        rates = np.zeros((deviceCount, COUNT), dtype=np.float32)
         for c in range(COUNT):
             for i in range(deviceCount):
                 if i not in gpu_target:
