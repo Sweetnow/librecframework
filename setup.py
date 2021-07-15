@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='librecframework',
-    version='1.3.1',
+    version='1.3.2',
     packages=find_packages(),
     python_requires='>=3.8',
     install_requires=[

@@ -673,6 +673,37 @@ class DefaultFullyRankingPipeline(_DefaultPipeline):
             test_batch_size,
             DefaultFullyRankingTrainPipeline,
             DefaultFullyRankingTestPipeline)
+        '''
+        The default pipeline for fully ranking experiments, which contains the following functions:
+        - Generate proper CLI;
+        - Load dataset and do negative sampling;
+        - Do grid-search (training and testing) with hyperparametes sended by CLI;
+        - Handle logging, visualization, model saving, early-stopping, overfitting detection metric calculating and hook value recording.
+
+
+        description: (string)
+            The description appears in CLI.
+        supported_datasets: (List[string])
+            The names of supported datasets. Users can choose one of them by CLI.
+        train_funcs: (DatasetFuncs)
+            Custom training dataset, including how to transform records from files (record), what to do after __init__ of training dataset class (postinit), how to do negative sampling (sample), pytorch Dataset __getitem__ (getitem) and pytorch Dataset __len__ (length).
+        test_funcs: (DatasetFuncs)
+            Similar to train_funcs, but for testing dataset.
+        hyperparam_manager: (HyperparamManager)
+            Model-specific hyperparameters (use .register to add needed hyperparameters and then send them into the program by CLI).
+        other_arg_path: (string)
+            The path of config.json, which is introduced in Readme.md.
+        pretrain_path: (string)
+            The path of pretrain.json, which is introduced in Readme.md.
+        sample_tag: (string)
+            The unique tag of sampling file for training as a part of sampling file name.
+        pin_memory: (bool)
+            Pytorch dataloader pin_memory argument.
+        min_memory: (float)
+            GPU Autoselect uses it to choose the card with enough memory.
+        test_batch_size: (int)
+            Batch size when testing.
+        '''
 
 
 class DefaultLeaveOneOutPipeline(_DefaultPipeline):
@@ -703,3 +734,6 @@ class DefaultLeaveOneOutPipeline(_DefaultPipeline):
             test_batch_size,
             DefaultLeaveOneOutTrainPipeline,
             DefaultLeaveOneOutTestPipeline)
+        '''
+        Similar to DefaultFullyRankingPipeline, but for leave-one-out experiments
+        '''

@@ -24,8 +24,15 @@ class VisShow(object):
     '''
 
     def __init__(self, server: str, port: int, envdir: str, subenv: str) -> None:
-        self.vis = Visdom(server, port=port,
-                          env=f'{envdir}_{subenv}', raise_exceptions=False)
+        if server == "":
+            self.vis = None
+        else:
+            self.vis = Visdom(
+                server,
+                port=port,
+                env=f'{envdir}_{subenv}',
+                raise_exceptions=False
+            )
 
     def get_window(self, target: str) -> Optional[str]:
         attrname = f'__{target}'
@@ -42,6 +49,9 @@ class VisShow(object):
             setattr(self, attrname, win)
 
     def update(self, target: str, X: List[Union[int, float]], Y: List[Union[int, float]]) -> None:
+        if self.vis is None:
+            return
+
         win = self.get_window(target)
         if not win is None:
             self.vis.line(Y, X, win=win, update='append')
@@ -50,6 +60,9 @@ class VisShow(object):
                 Y, X, opts={'title': target}))
 
     def xlabel(self, target: str, label: str) -> None:
+        if self.vis is None:
+            return
+
         win = self.get_window(target)
         if not win is None:
             self.vis.update_window_opts(win, {'xlabel': label})
@@ -57,6 +70,9 @@ class VisShow(object):
             raise ValueError(f'{target} has not existed')
 
     def ylabel(self, target: str, label: str) -> None:
+        if self.vis is None:
+            return
+
         win = self.get_window(target)
         if not win is None:
             self.vis.update_window_opts(win, {'ylabel': label})

@@ -88,11 +88,13 @@ The submodule is to provide a general way to save key values in model `forward` 
 
 ### Configuration
 
+`config.json`
+
 ```json
 {
     "user": "name_for_setproctitle",
     "visdom": {
-        "server": "visdom_ip",
+        "server": "visdom_ip",      # use empty string to disable visdom visualization
         "port": {
             "dataset_name1": 10001,
             "dataset_name2": 10002
@@ -143,9 +145,73 @@ The submodule is to provide a general way to save key values in model `forward` 
 
 ```
 
-### MF
+- `user`: One part of processes name when running the codes.
 
+#### Visdom
 
+`visdom` part in `config.json`
+
+- `server`: The IP of visdom server. Set it to `""` to disable visualization.
+- `port`: Key-value pairs, which key is dataset name and value is the port of visdom server.
+
+#### Training
+
+`training` part in `config.json`
+
+- `test_interval`: The interval epoch for testing.
+- `early_stop`: Stop training when the target metric drops `early_stop` times.
+- `overfit`: overfitting detection
+    - `protected_epoch`: Disable overfitting detection for the first `protected_epoch` epochs.
+    - `threshold`: Stop training when the target metric is less than `threshold`, which means the model is overfitting.
+
+#### Dataset
+
+`dataset` part in `config.json`
+
+- `path`: The root folder path of all datasets.
+- `seed`: The seed for negative sampling.
+- `use_backup`: Save/load the negative sampling results into/from file or not.
+
+#### Logger
+
+`logger` part in `config.json`
+
+- `path`: The root folder path for log files.
+- `policy`: [Do not modify] When to save the model as checkpoint.
+
+#### Metric
+
+`metric` part in `config.json`
+
+Each metric is described by
+```json
+{
+    "type": "MetricName",
+    "topk": X
+}
+```
+, which means `MetricName@X` (e.g. NDCG@10, Recall@5, MRR@40).
+
+- `target`: Metric used for early stopping, overfitting detection and so on.
+- `metrics`: The list of metrics which should be computed and recorded.
+
+### Pretrain Configuration
+
+`pretrain.json`
+
+```json
+{
+    "BeiBei": {
+        "GBMF": "path-to-GBMF-pretrain-model"
+    }
+}
+```
+
+The key of the first layer is dataset name.
+
+The key of the second layer is pretrain model name and the value is the path.
+
+According to dataset used for training or testing, the second layer will be sended into `model.load_pretrain` as python dict `pretrain_info`.
 
 ## Roadmap
 
