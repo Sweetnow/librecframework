@@ -89,7 +89,7 @@ def _path_to_saved_thing(path: Path, suffix: str) -> Tuple[List[Dict], str]:
                 save_dir = path.parent
             target_paths = []
             for file in save_dir.iterdir():
-                if fnmatch(str(file), f"{infoid}*.{suffix}"):
+                if fnmatch(file.name, f"{infoid}*.{suffix}"):
                     target_paths.append(file)
             if len(target_paths) == 0:
                 raise FileNotFoundError(f"Cannot find {infoid} in {save_dir}")
